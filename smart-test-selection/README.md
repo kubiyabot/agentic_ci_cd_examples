@@ -81,7 +81,7 @@ Tests:       30 passed, 30 total
 Time:        2.847s
 ```
 
-30 tests run. Every single time. Even for a one-line change.
+54 tests run. Every single time. Even for a one-line change.
 
 ### Step 4: Simulate a Code Change
 
@@ -159,14 +159,28 @@ smart-test-selection/
 │   │   ├── tasks.js              # Task CRUD operations
 │   │   └── tasks.test.js         # 13 tests
 │   │
-│   └── projects/                 # Projects module
-│       ├── projects.js           # Project management
-│       └── projects.test.js      # 17 tests
+│   ├── projects/                 # Projects module
+│   │   ├── projects.js           # Project management
+│   │   └── projects.test.js      # 17 tests
+│   │
+│   ├── comments/                 # Comments module
+│   │   ├── comments.js           # Comment management
+│   │   └── comments.test.js      # 6 tests
+│   │
+│   ├── tags/                     # Tags module
+│   │   ├── tags.js               # Tag management
+│   │   └── tags.test.js          # 8 tests
+│   │
+│   └── search/                   # Search module
+│       ├── search.js             # Search & filtering
+│       └── search.test.js        # 10 tests
 │
 ├── .circleci/config.yml          # CircleCI pipeline
 ├── package.json
 └── jest.config.js
 ```
+
+**Total: 54 tests across 5 modules**
 
 ---
 
@@ -174,11 +188,13 @@ smart-test-selection/
 
 | What Changed | Test Command | Tests Run | Tests Skipped |
 |--------------|--------------|-----------|---------------|
-| `src/tasks/*` | `npm run test:tasks` | 13 | 17 (57% saved) |
-| `src/projects/*` | `npm run test:projects` | 17 | 13 (43% saved) |
-| Both modules | `npm run test:all` | 30 | 0 |
-| `package.json` | `npm run test:all` | 30 | 0 (deps affect all) |
-| `README.md` only | (skip) | 0 | 30 (100% saved) |
+| `src/tasks/*` | `npm run test:tasks` | 13 | 41 (76% saved) |
+| `src/projects/*` | `npm run test:projects` | 17 | 37 (69% saved) |
+| `src/comments/*` | `npm run test:comments` | 6 | 48 (89% saved) |
+| `src/tags/*` | `npm run test:tags` | 8 | 46 (85% saved) |
+| `src/search/*` | `npm run test:search` | 10 | 44 (81% saved) |
+| `package.json` | `npm run test:all` | 54 | 0 (deps affect all) |
+| `README.md` only | (skip) | 0 | 54 (100% saved) |
 
 ---
 
@@ -186,9 +202,12 @@ smart-test-selection/
 
 | Command | What It Does | Tests |
 |---------|--------------|-------|
-| `npm run test:all` | Run ALL tests | 30 |
+| `npm run test:all` | Run ALL tests | 54 |
 | `npm run test:tasks` | Run only tasks module tests | 13 |
 | `npm run test:projects` | Run only projects module tests | 17 |
+| `npm run test:comments` | Run only comments module tests | 6 |
+| `npm run test:tags` | Run only tags module tests | 8 |
+| `npm run test:search` | Run only search module tests | 10 |
 
 ---
 
@@ -339,12 +358,14 @@ kubiya exec "Check diff, run only affected tests" --local --cwd . --yes
 
 | Scenario | Without Kubiya | With Kubiya | Saved |
 |----------|----------------|-------------|-------|
-| Tasks change | 30 tests (3s) | 13 tests (1s) | 57% |
-| Projects change | 30 tests (3s) | 17 tests (1.2s) | 43% |
-| Docs only | 30 tests (3s) | 0 tests (0s) | 100% |
-| Both modules | 30 tests (3s) | 30 tests (3s) | 0% |
+| Tasks change | 54 tests | 13 tests | 76% |
+| Projects change | 54 tests | 17 tests | 69% |
+| Comments change | 54 tests | 6 tests | 89% |
+| Tags change | 54 tests | 8 tests | 85% |
+| Docs only | 54 tests | 0 tests | 100% |
+| All modules | 54 tests | 54 tests | 0% |
 
-**Average savings: 50-70%** on typical workdays where most changes are isolated.
+**Average savings: 70-85%** on typical workdays where most changes are isolated to a single module.
 
 ---
 

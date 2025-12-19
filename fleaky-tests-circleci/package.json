@@ -11,6 +11,7 @@
     "test": "jest",
     "test:all": "jest --coverage",
     "test:stable": "jest --testPathIgnorePatterns=flaky",
+    "test:unit": "jest --testPathIgnorePatterns=flaky",
     "test:flaky": "jest flaky",
     "test:watch": "jest --watch"
   },
