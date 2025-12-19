@@ -5,10 +5,11 @@ version: 2.1
 # =============================================================================
 #
 # This pipeline demonstrates intelligent test execution:
-# 1. Analyze tests for flaky patterns (Math.random, timing, async issues)
-# 2. Skip known flaky tests automatically
-# 3. Run only stable tests
-# 4. Report findings with reasoning
+# 1. Clone from public repo: https://github.com/kubiyabot/agentic_ci_cd_examples
+# 2. Analyze tests for flaky patterns (Math.random, timing, async issues)
+# 3. Skip known flaky tests automatically
+# 4. Run only stable tests
+# 5. Report findings with reasoning
 #
 # All kubiya exec commands go through the Control Plane API Gateway
 # Zero configuration needed - just set KUBIYA_API_KEY
@@ -20,25 +21,34 @@ jobs:
     docker:
       - image: cimg/node:20.11
     steps:
-      - checkout
+      - run:
+          name: Clone Repository
+          command: |
+            git clone https://github.com/kubiyabot/agentic_ci_cd_examples.git repo
+            cd repo && git log -1 --oneline
+
+      - run:
+          name: Navigate to Flaky Tests Example
+          command: cd repo/fleaky-tests-circleci && ls -la
 
       - restore_cache:
           keys:
-            - v1-deps-{{ checksum "package.json" }}
-            - v1-deps-
+            - v1-flaky-deps-{{ checksum "repo/fleaky-tests-circleci/package.json" }}
+            - v1-flaky-deps-
 
       - run:
           name: Install Dependencies
-          command: npm ci
+          command: cd repo/fleaky-tests-circleci && npm ci
 
       - save_cache:
           paths:
-            - node_modules
-          key: v1-deps-{{ checksum "package.json" }}
+            - repo/fleaky-tests-circleci/node_modules
+          key: v1-flaky-deps-{{ checksum "repo/fleaky-tests-circleci/package.json" }}
 
       - run:
           name: Run All Tests (Including Flaky Ones)
           command: |
+            cd repo/fleaky-tests-circleci
             echo "=== BASELINE: Running ALL tests ==="
             echo "This includes flaky tests that may fail randomly"
             echo ""
@@ -47,7 +57,7 @@ jobs:
             echo "Note: Some tests likely failed due to flakiness"
 
       - store_test_results:
-          path: coverage
+          path: repo/fleaky-tests-circleci/coverage
 
   # ==========================================================================
   # INTELLIGENT APPROACH: Kubiya analyzes and skips flaky tests
@@ -59,33 +69,40 @@ jobs:
       KUBIYA_API_KEY: ${KUBIYA_API_KEY}
       KUBIYA_NON_INTERACTIVE: "true"
     steps:
-      - checkout
+      - run:
+          name: Clone Repository
+          command: |
+            git clone https://github.com/kubiyabot/agentic_ci_cd_examples.git repo
+            cd repo && git log -1 --oneline
+
+      - run:
+          name: Navigate to Flaky Tests Example
+          command: cd repo/fleaky-tests-circleci && ls -la
 
       - restore_cache:
           keys:
-            - v1-deps-{{ checksum "package.json" }}
-            - v1-deps-
+            - v1-flaky-deps-{{ checksum "repo/fleaky-tests-circleci/package.json" }}
+            - v1-flaky-deps-
 
       - run:
           name: Install Dependencies
-          command: npm ci
+          command: cd repo/fleaky-tests-circleci && npm ci
 
       - save_cache:
           paths:
-            - node_modules
-          key: v1-deps-{{ checksum "package.json" }}
+            - repo/fleaky-tests-circleci/node_modules
+          key: v1-flaky-deps-{{ checksum "repo/fleaky-tests-circleci/package.json" }}
 
       - run:
           name: Install Kubiya CLI
           command: |
             curl -fsSL https://raw.githubusercontent.com/kubiyabot/cli/main/install.sh | bash
-            export PATH="$HOME/.kubiya/bin:$PATH"
-            kubiya --version
+            echo 'export PATH="$HOME/.kubiya/bin:$PATH"' >> $BASH_ENV
 
       - run:
           name: Intelligent Test Execution
           command: |
-            export PATH="$HOME/.kubiya/bin:$PATH"
+            cd repo/fleaky-tests-circleci
 
             echo "=== KUBIYA INTELLIGENT TEST EXECUTION ==="
             echo ""
@@ -95,6 +112,7 @@ jobs:
 
             CONTEXT:
             - Repository: fleaky-tests-circleci
+            - Working directory: $(pwd)
             - This is a demo repo with intentionally flaky tests
 
             TASK: Analyze and run tests intelligently
@@ -123,17 +141,13 @@ jobs:
             - Overall test results
 
             Be thorough in your analysis and clear in your reporting.
-            " --local --cwd $(pwd) --yes --output json | tee /tmp/kubiya-results.json
+            " --local --cwd $(pwd) --yes
 
             echo ""
             echo "=== Kubiya execution complete ==="
 
-      - store_artifacts:
-          path: /tmp/kubiya-results.json
-          destination: kubiya-results.json
-
       - store_test_results:
-          path: coverage
+          path: repo/fleaky-tests-circleci/coverage
 
 # =============================================================================
 # Workflow Definitions

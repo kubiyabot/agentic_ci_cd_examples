@@ -5,10 +5,11 @@ version: 2.1
 # =============================================================================
 #
 # This pipeline demonstrates intelligent test selection:
-# 1. Analyze git diff to see what changed
-# 2. Map changes to affected modules
-# 3. Run only relevant test suites
-# 4. Skip unaffected modules entirely
+# 1. Clone from public repo: https://github.com/kubiyabot/agentic_ci_cd_examples
+# 2. Analyze git diff to see what changed
+# 3. Map changes to affected modules
+# 4. Run only relevant test suites
+# 5. Skip unaffected modules entirely
 #
 # All kubiya exec commands go through the Control Plane API Gateway
 # Zero configuration needed - just set KUBIYA_API_KEY
@@ -20,26 +21,35 @@ jobs:
     docker:
       - image: cimg/node:20.11
     steps:
-      - checkout
+      - run:
+          name: Clone Repository
+          command: |
+            git clone https://github.com/kubiyabot/agentic_ci_cd_examples.git repo
+            cd repo && git log -1 --oneline
+
+      - run:
+          name: Navigate to Smart Test Selection Example
+          command: cd repo/smart-test-selection && ls -la
 
       - restore_cache:
           keys:
-            - v1-deps-{{ checksum "package.json" }}
-            - v1-deps-
+            - v1-smart-deps-{{ checksum "repo/smart-test-selection/package.json" }}
+            - v1-smart-deps-
 
       - run:
           name: Install Dependencies
-          command: npm install
+          command: cd repo/smart-test-selection && npm install
 
       - save_cache:
           paths:
-            - node_modules
-          key: v1-deps-{{ checksum "package.json" }}
+            - repo/smart-test-selection/node_modules
+          key: v1-smart-deps-{{ checksum "repo/smart-test-selection/package.json" }}
 
       - run:
           name: Run ALL Tests (Mechanical Approach)
           command: |
-            echo "=== MECHANICAL: Running ALL 30 tests ==="
+            cd repo/smart-test-selection
+            echo "=== MECHANICAL: Running ALL 54 tests ==="
             echo "This runs every test regardless of what changed"
             echo ""
             npm run test:all
@@ -47,7 +57,7 @@ jobs:
             echo "All tests completed (but many were unnecessary)"
 
       - store_test_results:
-          path: coverage
+          path: repo/smart-test-selection/coverage
 
   # ==========================================================================
   # INTELLIGENT APPROACH: Kubiya analyzes changes and runs only relevant tests
@@ -59,37 +69,46 @@ jobs:
       KUBIYA_API_KEY: ${KUBIYA_API_KEY}
       KUBIYA_NON_INTERACTIVE: "true"
     steps:
-      - checkout
+      - run:
+          name: Clone Repository
+          command: |
+            git clone https://github.com/kubiyabot/agentic_ci_cd_examples.git repo
+            cd repo && git log -1 --oneline
+
+      - run:
+          name: Navigate to Smart Test Selection Example
+          command: cd repo/smart-test-selection && ls -la
+
       - run:
           name: Fetch git history for diff
           command: |
+            cd repo
             git fetch origin main --depth=2 || true
 
       - restore_cache:
           keys:
-            - v1-deps-{{ checksum "package.json" }}
-            - v1-deps-
+            - v1-smart-deps-{{ checksum "repo/smart-test-selection/package.json" }}
+            - v1-smart-deps-
 
       - run:
           name: Install Dependencies
-          command: npm install
+          command: cd repo/smart-test-selection && npm install
 
       - save_cache:
           paths:
-            - node_modules
-          key: v1-deps-{{ checksum "package.json" }}
+            - repo/smart-test-selection/node_modules
+          key: v1-smart-deps-{{ checksum "repo/smart-test-selection/package.json" }}
 
       - run:
           name: Install Kubiya CLI
           command: |
             curl -fsSL https://raw.githubusercontent.com/kubiyabot/cli/main/install.sh | bash
-            export PATH="$HOME/.kubiya/bin:$PATH"
-            kubiya --version
+            echo 'export PATH="$HOME/.kubiya/bin:$PATH"' >> $BASH_ENV
 
       - run:
           name: Intelligent Test Selection
           command: |
-            export PATH="$HOME/.kubiya/bin:$PATH"
+            cd repo/smart-test-selection
 
             echo "=== KUBIYA INTELLIGENT TEST SELECTION ==="
             echo ""
@@ -99,11 +118,15 @@ jobs:
 
             CONTEXT:
             - Repository: smart-test-selection
+            - Working directory: $(pwd)
             - This is a modular Node.js app with independent modules
 
             MODULE STRUCTURE:
-            - src/tasks/ → npm run test:tasks (task CRUD operations)
-            - src/projects/ → npm run test:projects (project management)
+            - src/tasks/ → npm run test:tasks (13 tests - task CRUD operations)
+            - src/projects/ → npm run test:projects (17 tests - project management)
+            - src/comments/ → npm run test:comments (6 tests - comment management)
+            - src/tags/ → npm run test:tags (8 tests - tag management)
+            - src/search/ → npm run test:search (10 tests - search & filtering)
 
             TASK: Analyze changes and run only affected tests
 
@@ -116,35 +139,32 @@ jobs:
             For each changed file:
             - src/tasks/* → affects 'tasks' module
             - src/projects/* → affects 'projects' module
+            - src/comments/* → affects 'comments' module
+            - src/tags/* → affects 'tags' module
+            - src/search/* → affects 'search' module
             - package.json → affects ALL modules (run all tests)
             - README.md, docs/* → affects NOTHING (skip tests)
 
             STEP 3 - Execute targeted tests:
-            Based on affected modules:
-            - If tasks affected: npm run test:tasks
-            - If projects affected: npm run test:projects
-            - If both affected: npm run test:all
-            - If only docs changed: echo 'No tests needed'
+            Based on affected modules, run ONLY the affected test commands.
+            If multiple modules affected, run each module's tests.
+            If only docs changed: echo 'No tests needed'
 
             STEP 4 - Report efficiency:
             Calculate and report:
-            - Total tests in project: 30
+            - Total tests in project: 54
             - Tests actually run: X
             - Tests skipped: Y
-            - Time saved: Z%
+            - Percentage saved: Z%
 
             Be efficient - only run what's necessary!
-            " --local --cwd $(pwd) --yes --output json | tee /tmp/kubiya-results.json
+            " --local --cwd $(pwd) --yes
 
             echo ""
             echo "=== Kubiya execution complete ==="
 
-      - store_artifacts:
-          path: /tmp/kubiya-results.json
-          destination: kubiya-results.json
-
       - store_test_results:
-          path: coverage
+          path: repo/smart-test-selection/coverage
 
 # =============================================================================
 # Workflow Definitions
@@ -156,7 +176,7 @@ workflows:
   compare-approaches:
     jobs:
       - test-mechanical:
-          name: "Mechanical: All 30 tests"
+          name: "Mechanical: All 54 tests"
       - test-intelligent:
           name: "Intelligent: Only relevant tests"
           context:
