@@ -1,0 +1,33 @@
+{
+  "name": "fleaky-tests-circleci",
+  "version": "1.0.0",
+  "description": "Example repository demonstrating Kubiya's intelligent test detection and execution",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "jest",
+    "test:all": "jest --coverage",
+    "test:stable": "jest --testPathIgnorePatterns=flaky",
+    "test:flaky": "jest flaky",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.4.0",
+    "@testing-library/react": "^15.0.0",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.12.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "typescript": "^5.4.0"
+  }
+}

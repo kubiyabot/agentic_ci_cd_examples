@@ -1,0 +1,74 @@
+================================================================================
+🧪 TEST FILE ANALYSIS REPORT
+================================================================================
+
+📊 SUMMARY:
+   Total test files: 9
+   ✅ Stable:       2 (22.2%)
+   ⚠️  Flaky:        5 (55.6%)
+   📅 Outdated:     2 (22.2%)
+   ❓ Unknown:      0 (0.0%)
+
+✅ STABLE TEST FILES (2 files):
+--------------------------------------------------
+📁 __tests__/unit/user-service.test.ts
+   Lines: 114, Size: 3552 chars
+   Stable indicators: STABLE, stable, should always pass
+
+📁 __tests__/unit/utils.test.ts
+   Lines: 61, Size: 1882 chars
+   Flaky indicators: new Date
+   Stable indicators: STABLE, stable, should always pass
+
+⚠️ FLAKY TEST FILES (5 files):
+--------------------------------------------------
+📁 __tests__/flaky/environment-dependent.test.ts
+   Lines: 61, Size: 1707 chars
+   Flaky indicators: Date(), new Date, process.env
+   Outdated indicators: old, OLD
+
+📁 __tests__/flaky/random-failure.test.ts
+   Lines: 53, Size: 1606 chars
+   Flaky indicators: Math.random, setTimeout, time
+   Stable indicators: deterministic
+
+📁 __tests__/integration/full-flow.test.ts
+   Lines: 83, Size: 2673 chars
+   Flaky indicators: Math.random, setTimeout, time
+   Outdated indicators: old, OLD
+
+📁 __tests__/integration/payments-api.test.ts
+   Lines: 51, Size: 1518 chars
+   Flaky indicators: Math.random, setTimeout, time
+   Outdated indicators: old, OLD
+
+📁 test_analyzer.py
+   Lines: 348, Size: 13440 chars
+   Flaky indicators: Math.random, setTimeout, setInterval
+   Outdated indicators: TODO, FIXME, deprecated
+   Stable indicators: STABLE, stable, should always pass
+
+📅 OUTDATED TEST FILES (2 files):
+--------------------------------------------------
+📁 __tests__/integration/users-api.test.ts
+   Lines: 47, Size: 1530 chars
+   Flaky indicators: integration test
+   Outdated indicators: outdated, old, OLD
+
+📁 __tests__/unit/payment-processor.test.ts
+   Lines: 105, Size: 3609 chars
+   Outdated indicators: old, OLD
+   Stable indicators: STABLE, stable, should always pass
+
+🎯 RECOMMENDATIONS:
+------------------------------
+• Fix 5 flaky test(s) to improve CI reliability
+  - Consider mocking time-dependent functions
+  - Remove random elements from tests
+  - Use deterministic test data
+• Update or remove 2 outdated test(s)
+  - Review and fix broken assertions
+  - Update tests to match current implementation
+  - Remove obsolete tests
+
+Report generated at: 2025-12-15T13:27:46.275752

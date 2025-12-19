@@ -1,0 +1,172 @@
+version: 2.1
+
+# =============================================================================
+# Kubiya Intelligent CI/CD Pipeline - Flaky Test Detection
+# =============================================================================
+#
+# This pipeline demonstrates intelligent test execution:
+# 1. Analyze tests for flaky patterns (Math.random, timing, async issues)
+# 2. Skip known flaky tests automatically
+# 3. Run only stable tests
+# 4. Report findings with reasoning
+#
+# All kubiya exec commands go through the Control Plane API Gateway
+# Zero configuration needed - just set KUBIYA_API_KEY
+# =============================================================================
+
+jobs:
+  # Baseline approach: Run all tests without Kubiya (for comparison)
+  test-without-kubiya:
+    docker:
+      - image: cimg/node:20.11
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-deps-{{ checksum "package.json" }}
+            - v1-deps-
+
+      - run:
+          name: Install Dependencies
+          command: npm ci
+
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-deps-{{ checksum "package.json" }}
+
+      - run:
+          name: Run All Tests (Including Flaky Ones)
+          command: |
+            echo "=== BASELINE: Running ALL tests ==="
+            echo "This includes flaky tests that may fail randomly"
+            echo ""
+            npm run test:all || true
+            echo ""
+            echo "Note: Some tests likely failed due to flakiness"
+
+      - store_test_results:
+          path: coverage
+
+  # ==========================================================================
+  # INTELLIGENT APPROACH: Kubiya analyzes and skips flaky tests
+  # ==========================================================================
+  test-with-kubiya:
+    docker:
+      - image: cimg/node:20.11
+    environment:
+      KUBIYA_API_KEY: ${KUBIYA_API_KEY}
+      KUBIYA_NON_INTERACTIVE: "true"
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-deps-{{ checksum "package.json" }}
+            - v1-deps-
+
+      - run:
+          name: Install Dependencies
+          command: npm ci
+
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-deps-{{ checksum "package.json" }}
+
+      - run:
+          name: Install Kubiya CLI
+          command: |
+            curl -fsSL https://raw.githubusercontent.com/kubiyabot/cli/main/install.sh | bash
+            export PATH="$HOME/.kubiya/bin:$PATH"
+            kubiya --version
+
+      - run:
+          name: Intelligent Test Execution
+          command: |
+            export PATH="$HOME/.kubiya/bin:$PATH"
+
+            echo "=== KUBIYA INTELLIGENT TEST EXECUTION ==="
+            echo ""
+
+            kubiya exec "
+            You are an intelligent CI/CD agent analyzing tests for flaky patterns.
+
+            CONTEXT:
+            - Repository: fleaky-tests-circleci
+            - This is a demo repo with intentionally flaky tests
+
+            TASK: Analyze and run tests intelligently
+
+            STEP 1 - Analyze flaky test directory:
+            List files in __tests__/flaky/ and analyze each for flaky patterns:
+            - Math.random() usage (causes random failures)
+            - new Date() or time-based logic (timing dependent)
+            - setTimeout with variable delays (async race conditions)
+
+            STEP 2 - Report findings:
+            For each flaky test found, explain:
+            - File path
+            - Type of flakiness (RANDOM, TIMING, ASYNC)
+            - Why it would fail intermittently
+            - Recommended fix
+
+            STEP 3 - Run stable tests only:
+            Execute: npm run test:unit
+            This runs only the stable unit tests, skipping flaky ones.
+
+            STEP 4 - Summary:
+            Report:
+            - How many tests were run vs skipped
+            - Time saved by skipping flaky tests
+            - Overall test results
+
+            Be thorough in your analysis and clear in your reporting.
+            " --local --cwd $(pwd) --yes --output json | tee /tmp/kubiya-results.json
+
+            echo ""
+            echo "=== Kubiya execution complete ==="
+
+      - store_artifacts:
+          path: /tmp/kubiya-results.json
+          destination: kubiya-results.json
+
+      - store_test_results:
+          path: coverage
+
+# =============================================================================
+# Workflow Definitions
+# =============================================================================
+workflows:
+  version: 2
+
+  # Run without Kubiya (baseline for comparison)
+  baseline-testing:
+    jobs:
+      - test-without-kubiya:
+          filters:
+            branches:
+              only:
+                - baseline
+
+  # Run with Kubiya (default, recommended)
+  intelligent-testing:
+    jobs:
+      - test-with-kubiya:
+          context:
+            - kubiya-secrets
+          filters:
+            branches:
+              ignore:
+                - baseline
+
+  # Run both for comparison (manual trigger)
+  compare-approaches:
+    jobs:
+      - test-without-kubiya:
+          name: "Baseline: All Tests"
+      - test-with-kubiya:
+          name: "Kubiya: Intelligent"
+          context:
+            - kubiya-secrets

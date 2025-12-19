@@ -1,0 +1,21 @@
+{
+  "name": "smart-test-selection",
+  "version": "1.0.0",
+  "description": "Task Management App demonstrating Kubiya's intelligent, context-aware test selection",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "test:all": "jest --coverage --verbose",
+    "test:tasks": "jest src/tasks",
+    "test:projects": "jest src/projects",
+    "test:comments": "jest src/comments",
+    "test:tags": "jest src/tags",
+    "test:search": "jest src/search"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}

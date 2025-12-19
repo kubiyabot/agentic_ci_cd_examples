@@ -1,0 +1,365 @@
+{
+  "summary": {
+    "total_files": 9,
+    "stable": 2,
+    "flaky": 5,
+    "outdated": 2,
+    "unknown": 0
+  },
+  "files": {
+    "stable": [
+      {
+        "file_path": "__tests__/unit/user-service.test.ts",
+        "size": 3552,
+        "lines": 114,
+        "flaky_score": 0,
+        "outdated_score": 0,
+        "stable_score": 6,
+        "indicators": {
+          "flaky": [],
+          "outdated": [],
+          "stable": [
+            "STABLE",
+            "stable",
+            "should always pass",
+            "unit test",
+            "unit test"
+          ]
+        },
+        "content_preview": "/**\n * Unit tests for user service\n * These tests are STABLE and should always pass\n */\n\nimport {\n  createUser,\n  getUserById,\n  getUserByEmail,\n  getAllUsers,\n  deleteUser,\n  clearUsers,\n} from '@/lib/user-service';\n\ndescribe('User Service - STABLE TESTS', () => {\n  beforeEach(() => {\n    clearUsers();\n  });\n\n  describe('createUser', () => {\n    it('should create a new user successfully', () => {\n      const result = createUser({ email: 'test@example.com', name: 'Test User' });\n      expect(res...",
+        "metadata": {
+          "size_bytes": 3552,
+          "modified_time": "2025-12-15T13:17:59.533840",
+          "created_time": "2025-12-15T13:17:59.538155",
+          "is_old": false,
+          "last_git_commit": "2025-12-15 13:18:23 -0800",
+          "git_commit_count": 1
+        },
+        "category": "stable",
+        "relative_path": "__tests__/unit/user-service.test.ts"
+      },
+      {
+        "file_path": "__tests__/unit/utils.test.ts",
+        "size": 1882,
+        "lines": 61,
+        "flaky_score": 1,
+        "outdated_score": 0,
+        "stable_score": 6,
+        "indicators": {
+          "flaky": [
+            "new Date"
+          ],
+          "outdated": [],
+          "stable": [
+            "STABLE",
+            "stable",
+            "should always pass",
+            "unit test",
+            "unit test"
+          ]
+        },
+        "content_preview": "/**\n * Unit tests for utility functions\n * These tests are STABLE and should always pass\n */\n\nimport { formatCurrency, isValidEmail, generateId, formatDate } from '@/lib/utils';\n\ndescribe('Utility Functions - STABLE TESTS', () => {\n  describe('formatCurrency', () => {\n    it('should format number as USD currency', () => {\n      expect(formatCurrency(1234.56)).toBe('$1,234.56');\n      expect(formatCurrency(0)).toBe('$0.00');\n      expect(formatCurrency(999999.99)).toBe('$999,999.99');\n    });\n\n  ...",
+        "metadata": {
+          "size_bytes": 1882,
+          "modified_time": "2025-12-15T13:16:16.746645",
+          "created_time": "2025-12-15T13:16:16.752017",
+          "is_old": false,
+          "last_git_commit": "2025-12-15 13:16:41 -0800",
+          "git_commit_count": 1
+        },
+        "category": "stable",
+        "relative_path": "__tests__/unit/utils.test.ts"
+      }
+    ],
+    "flaky": [
+      {
+        "file_path": "__tests__/flaky/environment-dependent.test.ts",
+        "size": 1707,
+        "lines": 61,
+        "flaky_score": 15,
+        "outdated_score": 2,
+        "stable_score": 0,
+        "indicators": {
+          "flaky": [
+            "Date()",
+            "new Date",
+            "process.env",
+            "NODE_ENV",
+            "environment",
+            "time",
+            "flaky",
+            "FLAKY",
+            "depends on",
+            "environment-dependent",
+            "flaky in path"
+          ],
+          "outdated": [
+            "old",
+            "OLD"
+          ],
+          "stable": []
+        },
+        "content_preview": "/**\n * Environment-dependent tests\n * \u26a0\ufe0f FLAKY - Behavior depends on time, date, and environment\n */\n\ndescribe('Environment Dependent Tests - FLAKY', () => {\n  it('should pass only during work hours', () => {\n    const hour = new Date().getHours();\n\n    // Fails outside of 9 AM - 5 PM\n    expect(hour).toBeGreaterThanOrEqual(9);\n    expect(hour).toBeLessThan(17);\n  });\n\n  it('should pass only on weekdays', () => {\n    const day = new Date().getDay();\n\n    // Fails on weekends (0 = Sunday, 6 = Sat...",
+        "metadata": {
+          "size_bytes": 1711,
+          "modified_time": "2025-12-15T13:19:41.700390",
+          "created_time": "2025-12-15T13:19:41.705596",
+          "is_old": false,
+          "last_git_commit": "2025-12-15 13:19:41 -0800",
+          "git_commit_count": 1
+        },
+        "category": "flaky",
+        "relative_path": "__tests__/flaky/environment-dependent.test.ts"
+      },
+      {
+        "file_path": "__tests__/flaky/random-failure.test.ts",
+        "size": 1606,
+        "lines": 53,
+        "flaky_score": 12,
+        "outdated_score": 0,
+        "stable_score": 1,
+        "indicators": {
+          "flaky": [
+            "Math.random",
+            "setTimeout",
+            "time",
+            "random",
+            "flaky",
+            "FLAKY",
+            "intermittent",
+            "flaky in path"
+          ],
+          "outdated": [],
+          "stable": [
+            "deterministic"
+          ]
+        },
+        "content_preview": "/**\n * Randomly failing test\n * \u26a0\ufe0f EXTREMELY FLAKY - Fails approximately 30% of the time\n */\n\ndescribe('Random Failure Tests - FLAKY', () => {\n  it('should randomly fail based on probability', () => {\n    // This test fails ~30% of the time\n    const random = Math.random();\n\n    if (random < 0.3) {\n      // Simulate a flaky failure\n      throw new Error(`Random flaky failure! (random value: ${random})`);\n    }\n\n    expect(true).toBe(true);\n  });\n\n  it('should fail on specific random seed ranges'...",
+        "metadata": {
+          "size_bytes": 1610,
+          "modified_time": "2025-12-15T13:19:41.626987",
+          "created_time": "2025-12-15T13:19:41.631742",
+          "is_old": false,
+          "last_git_commit": "2025-12-15 13:19:41 -0800",
+          "git_commit_count": 1
+        },
+        "category": "flaky",
+        "relative_path": "__tests__/flaky/random-failure.test.ts"
+      },
+      {
+        "file_path": "__tests__/integration/full-flow.test.ts",
+        "size": 2673,
+        "lines": 83,
+        "flaky_score": 8,
+        "outdated_score": 2,
+        "stable_score": 0,
+        "indicators": {
+          "flaky": [
+            "Math.random",
+            "setTimeout",
+            "time",
+            "random",
+            "flaky",
+            "FLAKY",
+            "timing",
+            "integration test"
+          ],
+          "outdated": [
+            "old",
+            "OLD"
+          ],
+          "stable": []
+        },
+        "content_preview": "/**\n * Full integration flow test\n * \u26a0\ufe0f SLOW & FLAKY TEST - Takes long time and sometimes times out\n */\n\nimport { createUser, clearUsers } from '@/lib/user-service';\nimport { processPayment } from '@/lib/payment-processor';\n\ndescribe('Full Application Flow - SLOW & FLAKY', () => {\n  beforeEach(() => {\n    clearUsers();\n  });\n\n  it('should complete full user creation and payment flow', async () => {\n    // This test is intentionally slow and flaky\n\n    // Step 1: Create user (with artificial dela...",
+        "metadata": {
+          "size_bytes": 2677,
+          "modified_time": "2025-12-15T13:19:41.557682",
+          "created_time": "2025-12-15T13:19:41.561602",
+          "is_old": false,
+          "last_git_commit": "2025-12-15 13:19:41 -0800",
+          "git_commit_count": 1
+        },
+        "category": "flaky",
+        "relative_path": "__tests__/integration/full-flow.test.ts"
+      },
+      {
+        "file_path": "__tests__/integration/payments-api.test.ts",
+        "size": 1518,
+        "lines": 51,
+        "flaky_score": 9,
+        "outdated_score": 2,
+        "stable_score": 0,
+        "indicators": {
+          "flaky": [
+            "Math.random",
+            "setTimeout",
+            "time",
+            "random",
+            "flaky",
+            "FLAKY",
+            "timing",
+            "race condition",
+            "integration test"
+          ],
+          "outdated": [
+            "old",
+            "OLD"
+          ],
+          "stable": []
+        },
+        "content_preview": "/**\n * Integration test for payments API\n * \u26a0\ufe0f FLAKY TEST - Has timing issues and occasionally times out\n */\n\nimport { processPayment } from '@/lib/payment-processor';\n\ndescribe('Payments API Integration - FLAKY TEST', () => {\n  it('should process payment with realistic delay', async () => {\n    // Simulate network delay - sometimes exceeds Jest timeout\n    const randomDelay = Math.random() * 2500; // 0-2500ms delay\n    await new Promise(resolve => setTimeout(resolve, randomDelay));\n\n    const r...",
+        "metadata": {
+          "size_bytes": 1522,
+          "modified_time": "2025-12-15T13:19:41.463299",
+          "created_time": "2025-12-15T13:19:41.467732",
+          "is_old": false,
+          "last_git_commit": "2025-12-15 13:19:41 -0800",
+          "git_commit_count": 1
+        },
+        "category": "flaky",
+        "relative_path": "__tests__/integration/payments-api.test.ts"
+      },
+      {
+        "file_path": "test_analyzer.py",
+        "size": 13440,
+        "lines": 348,
+        "flaky_score": 19,
+        "outdated_score": 15,
+        "stable_score": 7,
+        "indicators": {
+          "flaky": [
+            "Math.random",
+            "setTimeout",
+            "setInterval",
+            "Date()",
+            "new Date",
+            "process.env",
+            "NODE_ENV",
+            "environment",
+            "time",
+            "random",
+            "flaky",
+            "FLAKY",
+            "intermittent",
+            "unstable",
+            "fails sometimes",
+            "depends on",
+            "environment-dependent",
+            "timing",
+            "race condition"
+          ],
+          "outdated": [
+            "TODO",
+            "FIXME",
+            "deprecated",
+            "outdated",
+            "old",
+            "OLD",
+            "OUTDATED",
+            "needs update",
+            "broken",
+            "disabled",
+            "skip",
+            "pending",
+            "wrong assertions",
+            "no longer",
+            "legacy"
+          ],
+          "stable": [
+            "STABLE",
+            "stable",
+            "should always pass",
+            "deterministic",
+            "unit test",
+            "pure function",
+            "predictable"
+          ]
+        },
+        "content_preview": "#!/usr/bin/env python3\n\"\"\"\nRepository Test File Analyzer\nAnalyzes test files and categorizes them as stable, flaky, or outdated.\n\"\"\"\n\nimport os\nimport re\nimport json\nimport subprocess\nfrom pathlib import Path\nfrom datetime import datetime, timedelta\nfrom typing import Dict, List, Tuple, Any\nimport fnmatch\n\nclass TestFileAnalyzer:\n    def __init__(self, repo_path: str = \".\"):\n        self.repo_path = Path(repo_path)\n        self.test_files = []\n        self.analysis_results = {\n            \"stabl...",
+        "metadata": {
+          "size_bytes": 13497,
+          "modified_time": "2025-12-15T13:27:46.229607",
+          "created_time": "2025-12-15T13:27:46.229607",
+          "is_old": false,
+          "git_commit_count": 0
+        },
+        "category": "flaky",
+        "relative_path": "test_analyzer.py"
+      }
+    ],
+    "outdated": [
+      {
+        "file_path": "__tests__/integration/users-api.test.ts",
+        "size": 1530,
+        "lines": 47,
+        "flaky_score": 1,
+        "outdated_score": 7,
+        "stable_score": 0,
+        "indicators": {
+          "flaky": [
+            "integration test"
+          ],
+          "outdated": [
+            "outdated",
+            "old",
+            "OLD",
+            "OUTDATED",
+            "wrong assertions",
+            "no longer",
+            "legacy"
+          ],
+          "stable": []
+        },
+        "content_preview": "/**\n * Integration test for users API\n * \u26a0\ufe0f OUTDATED TEST - Has wrong assertions that no longer match current implementation\n */\n\nimport { createUser, getAllUsers, clearUsers } from '@/lib/user-service';\n\ndescribe('Users API Integration - OUTDATED TEST', () => {\n  beforeEach(() => {\n    clearUsers();\n  });\n\n  it('should return user with legacy format', () => {\n    // This test expects an old API response format that no longer exists\n    const result = createUser({ email: 'test@example.com', name...",
+        "metadata": {
+          "size_bytes": 1534,
+          "modified_time": "2025-12-15T13:19:41.503437",
+          "created_time": "2025-12-15T13:19:41.507950",
+          "is_old": false,
+          "last_git_commit": "2025-12-15 13:19:41 -0800",
+          "git_commit_count": 1
+        },
+        "category": "outdated",
+        "relative_path": "__tests__/integration/users-api.test.ts"
+      },
+      {
+        "file_path": "__tests__/unit/payment-processor.test.ts",
+        "size": 3609,
+        "lines": 105,
+        "flaky_score": 0,
+        "outdated_score": 2,
+        "stable_score": 6,
+        "indicators": {
+          "flaky": [],
+          "outdated": [
+            "old",
+            "OLD"
+          ],
+          "stable": [
+            "STABLE",
+            "stable",
+            "should always pass",
+            "unit test",
+            "unit test"
+          ]
+        },
+        "content_preview": "/**\n * Unit tests for payment processor\n * These tests are STABLE and should always pass\n */\n\nimport {\n  validateCardNumber,\n  validateAmount,\n  validateCVV,\n  processPayment,\n  PaymentRequest,\n} from '@/lib/payment-processor';\n\ndescribe('Payment Processor - STABLE TESTS', () => {\n  describe('validateCardNumber', () => {\n    it('should validate correct card numbers', () => {\n      expect(validateCardNumber('4532015112830366')).toBe(true); // Valid Visa\n      expect(validateCardNumber('5425233430...",
+        "metadata": {
+          "size_bytes": 3609,
+          "modified_time": "2025-12-15T13:17:09.054045",
+          "created_time": "2025-12-15T13:17:09.059565",
+          "is_old": false,
+          "last_git_commit": "2025-12-15 13:17:33 -0800",
+          "git_commit_count": 1
+        },
+        "category": "outdated",
+        "relative_path": "__tests__/unit/payment-processor.test.ts"
+      }
+    ],
+    "unknown": []
+  },
+  "analysis_metadata": {
+    "analyzed_at": "2025-12-15T13:27:46.275752",
+    "repository_path": "."
+  }
+}

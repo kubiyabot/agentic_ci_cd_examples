@@ -1,0 +1,184 @@
+version: 2.1
+
+# =============================================================================
+# Kubiya Intelligent CI/CD Pipeline - Smart Test Selection
+# =============================================================================
+#
+# This pipeline demonstrates intelligent test selection:
+# 1. Analyze git diff to see what changed
+# 2. Map changes to affected modules
+# 3. Run only relevant test suites
+# 4. Skip unaffected modules entirely
+#
+# All kubiya exec commands go through the Control Plane API Gateway
+# Zero configuration needed - just set KUBIYA_API_KEY
+# =============================================================================
+
+jobs:
+  # MECHANICAL APPROACH: Run all tests regardless of changes
+  test-mechanical:
+    docker:
+      - image: cimg/node:20.11
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-deps-{{ checksum "package.json" }}
+            - v1-deps-
+
+      - run:
+          name: Install Dependencies
+          command: npm install
+
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-deps-{{ checksum "package.json" }}
+
+      - run:
+          name: Run ALL Tests (Mechanical Approach)
+          command: |
+            echo "=== MECHANICAL: Running ALL 30 tests ==="
+            echo "This runs every test regardless of what changed"
+            echo ""
+            npm run test:all
+            echo ""
+            echo "All tests completed (but many were unnecessary)"
+
+      - store_test_results:
+          path: coverage
+
+  # ==========================================================================
+  # INTELLIGENT APPROACH: Kubiya analyzes changes and runs only relevant tests
+  # ==========================================================================
+  test-intelligent:
+    docker:
+      - image: cimg/node:20.11
+    environment:
+      KUBIYA_API_KEY: ${KUBIYA_API_KEY}
+      KUBIYA_NON_INTERACTIVE: "true"
+    steps:
+      - checkout
+      - run:
+          name: Fetch git history for diff
+          command: |
+            git fetch origin main --depth=2 || true
+
+      - restore_cache:
+          keys:
+            - v1-deps-{{ checksum "package.json" }}
+            - v1-deps-
+
+      - run:
+          name: Install Dependencies
+          command: npm install
+
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-deps-{{ checksum "package.json" }}
+
+      - run:
+          name: Install Kubiya CLI
+          command: |
+            curl -fsSL https://raw.githubusercontent.com/kubiyabot/cli/main/install.sh | bash
+            export PATH="$HOME/.kubiya/bin:$PATH"
+            kubiya --version
+
+      - run:
+          name: Intelligent Test Selection
+          command: |
+            export PATH="$HOME/.kubiya/bin:$PATH"
+
+            echo "=== KUBIYA INTELLIGENT TEST SELECTION ==="
+            echo ""
+
+            kubiya exec "
+            You are an intelligent CI/CD agent that runs only relevant tests.
+
+            CONTEXT:
+            - Repository: smart-test-selection
+            - This is a modular Node.js app with independent modules
+
+            MODULE STRUCTURE:
+            - src/tasks/ → npm run test:tasks (task CRUD operations)
+            - src/projects/ → npm run test:projects (project management)
+
+            TASK: Analyze changes and run only affected tests
+
+            STEP 1 - Check what changed:
+            Run: git diff HEAD~1 --name-only 2>/dev/null || git diff origin/main --name-only 2>/dev/null || echo 'No diff available'
+
+            If no diff available, run all tests.
+
+            STEP 2 - Map changes to modules:
+            For each changed file:
+            - src/tasks/* → affects 'tasks' module
+            - src/projects/* → affects 'projects' module
+            - package.json → affects ALL modules (run all tests)
+            - README.md, docs/* → affects NOTHING (skip tests)
+
+            STEP 3 - Execute targeted tests:
+            Based on affected modules:
+            - If tasks affected: npm run test:tasks
+            - If projects affected: npm run test:projects
+            - If both affected: npm run test:all
+            - If only docs changed: echo 'No tests needed'
+
+            STEP 4 - Report efficiency:
+            Calculate and report:
+            - Total tests in project: 30
+            - Tests actually run: X
+            - Tests skipped: Y
+            - Time saved: Z%
+
+            Be efficient - only run what's necessary!
+            " --local --cwd $(pwd) --yes --output json | tee /tmp/kubiya-results.json
+
+            echo ""
+            echo "=== Kubiya execution complete ==="
+
+      - store_artifacts:
+          path: /tmp/kubiya-results.json
+          destination: kubiya-results.json
+
+      - store_test_results:
+          path: coverage
+
+# =============================================================================
+# Workflow Definitions
+# =============================================================================
+workflows:
+  version: 2
+
+  # Compare both approaches
+  compare-approaches:
+    jobs:
+      - test-mechanical:
+          name: "Mechanical: All 30 tests"
+      - test-intelligent:
+          name: "Intelligent: Only relevant tests"
+          context:
+            - kubiya-secrets
+
+  # Default: Use intelligent approach
+  intelligent-testing:
+    jobs:
+      - test-intelligent:
+          context:
+            - kubiya-secrets
+          filters:
+            branches:
+              only:
+                - main
+                - develop
+
+  # Baseline for comparison
+  baseline-testing:
+    jobs:
+      - test-mechanical:
+          filters:
+            branches:
+              only:
+                - baseline
