@@ -101,12 +101,17 @@ jobs:
             echo ""
 
             # Debug: Check if API key is set
+            echo "Checking KUBIYA_API_KEY..."
+            echo "Length: ${#KUBIYA_API_KEY}"
+            echo "First 10 chars: ${KUBIYA_API_KEY:0:10}..."
+
             if [ -z "$KUBIYA_API_KEY" ]; then
-              echo "ERROR: KUBIYA_API_KEY is not set!"
-              echo "Make sure the kubiya-secrets context is attached to this job"
+              echo "ERROR: KUBIYA_API_KEY is empty!"
               exit 1
             fi
-            echo "API key is set (length: ${#KUBIYA_API_KEY})"
+
+            # Export explicitly for kubiya CLI
+            export KUBIYA_API_KEY="$KUBIYA_API_KEY"
 
             kubiya exec "
             Analyze tests for flaky patterns in this Node.js project.
