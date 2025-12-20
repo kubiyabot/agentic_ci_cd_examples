@@ -97,40 +97,26 @@ jobs:
             cd fleaky-tests-circleci
 
             echo "=== KUBIYA INTELLIGENT TEST EXECUTION ==="
-            echo "Using direct agent execution (no planning phase)"
+            echo "Using Kubiya planner to analyze and run tests"
             echo ""
 
-            AGENT_UUID="${KUBIYA_AGENT_UUID}"
-            echo "Agent UUID: ${AGENT_UUID:0:8}..."
+            kubiya exec "
+            Analyze tests for flaky patterns in this Node.js project.
 
-            kubiya exec agent "${AGENT_UUID}" "
-            You are an intelligent CI/CD agent analyzing tests for flaky patterns.
+            TASK:
+            1. List files in __tests__/flaky/ and identify flaky patterns:
+               - Math.random() usage (random failures)
+               - new Date() or time-based logic (timing dependent)
+               - setTimeout with variable delays (race conditions)
 
-            CONTEXT:
-            - Repository: fleaky-tests-circleci
-            - Working directory: $(pwd)
-            - This is a demo repo with intentionally flaky tests
+            2. Report findings for each flaky test:
+               - File path
+               - Type of flakiness (RANDOM, TIMING, ASYNC)
+               - Why it fails intermittently
 
-            TASK: Analyze and run tests intelligently
+            3. Run only stable tests: npm run test:unit
 
-            STEP 1 - Analyze flaky test directory:
-            List files in __tests__/flaky/ and analyze each for flaky patterns:
-            - Math.random() usage (causes random failures)
-            - new Date() or time-based logic (timing dependent)
-            - setTimeout with variable delays (async race conditions)
-
-            STEP 2 - Report findings:
-            For each flaky test found, explain:
-            - File path
-            - Type of flakiness (RANDOM, TIMING, ASYNC)
-            - Why it would fail intermittently
-
-            STEP 3 - Run stable tests only:
-            Execute: npm run test:unit
-            This runs only the stable unit tests, skipping flaky ones.
-
-            STEP 4 - Summary:
-            Report how many tests were run vs skipped and overall results.
+            4. Summarize: tests run vs skipped, overall results.
             " --local --cwd . --yes
 
             echo ""
@@ -215,16 +201,11 @@ jobs:
             cd smart-test-selection
 
             echo "=== KUBIYA INTELLIGENT TEST SELECTION ==="
-            echo "Using direct agent: ${KUBIYA_AGENT_UUID}"
+            echo "Using Kubiya planner to select and run tests"
             echo ""
 
-            kubiya exec agent ${KUBIYA_AGENT_UUID} "
-            You are an intelligent CI/CD agent that runs only relevant tests.
-
-            CONTEXT:
-            - Repository: smart-test-selection
-            - Working directory: $(pwd)
-            - This is a modular Node.js app with independent modules
+            kubiya exec "
+            Run only the tests affected by recent changes in this Node.js project.
 
             MODULE STRUCTURE:
             - src/tasks/ → npm run test:tasks (13 tests)
@@ -233,19 +214,22 @@ jobs:
             - src/tags/ → npm run test:tags (8 tests)
             - src/search/ → npm run test:search (10 tests)
 
-            TASK: Analyze changes and run only affected tests
+            TASK:
+            1. Check what changed: git diff HEAD~1 --name-only
+               (or git diff origin/main --name-only if no previous commit)
 
-            STEP 1 - Check what changed:
-            Run: git diff HEAD~1 --name-only 2>/dev/null || git diff origin/main --name-only 2>/dev/null || echo 'No diff available'
-            If no diff available, run all tests.
+            2. Map changes to test commands:
+               - src/tasks/* → npm run test:tasks
+               - src/projects/* → npm run test:projects
+               - src/comments/* → npm run test:comments
+               - src/tags/* → npm run test:tags
+               - src/search/* → npm run test:search
+               - package.json → npm run test:all
+               - README.md, docs/* → skip tests
 
-            STEP 2 - Map changes to modules and run only affected test commands.
-            - src/tasks/* → npm run test:tasks
-            - src/projects/* → npm run test:projects
-            - package.json → npm run test:all
-            - README.md, docs/* → skip tests
+            3. Run only the affected test suites.
 
-            STEP 3 - Report efficiency (tests run vs total 54).
+            4. Report efficiency: tests run vs total 54.
             " --local --cwd . --yes
 
             echo ""
