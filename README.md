@@ -6,6 +6,23 @@ This repository demonstrates how to add AI-powered intelligence to your existing
 
 ---
 
+## Table of Contents
+
+- [The Problem](#the-problem)
+- [The Solution](#the-solution-one-command)
+- [Examples](#examples-in-this-repository)
+- [Quick Start](#quick-start)
+- [Makefile Commands](#makefile-commands)
+- [The `kubiya exec` Command](#the-kubiya-exec-command)
+- [How It Works](#how-it-works)
+- [Cognitive Memory](#cognitive-memory)
+- [CircleCI Integration](#circleci-integration)
+- [Repository Structure](#repository-structure)
+- [Troubleshooting](#troubleshooting)
+- [Learn More](#learn-more)
+
+---
+
 ## The Problem
 
 Every engineering team faces these CI/CD pain points:
@@ -32,6 +49,7 @@ That's it. The Kubiya agent:
 - Makes intelligent decisions about what to test
 - Executes only what's necessary
 - Reports what it did and why
+- **Stores learnings in cognitive memory** for future runs
 
 **No configuration files. No complex setup. No vendor lock-in.**
 
@@ -61,8 +79,8 @@ After:   6 tests, 100% pass rate (stable only)
 **Solution:** Kubiya maps code changes to test suites and runs only what's affected.
 
 ```
-Before: 30 tests on every commit (3+ seconds)
-After:  13 tests when tasks changed (57% saved)
+Before: 54 tests on every commit
+After:  13 tests when tasks changed (76% saved)
         0 tests when README changed (100% saved)
 ```
 
@@ -70,82 +88,161 @@ After:  13 tests when tasks changed (57% saved)
 
 ---
 
-## Quick Start (5 Minutes)
+## Quick Start
 
 ### Prerequisites
 
-- Node.js 20+
-- A Kubiya API key ([Get one free](https://app.kubiya.ai))
+- **Node.js 20+** - [Download](https://nodejs.org/)
+- **Kubiya CLI** - [Installation guide](https://docs.kubiya.ai/cli)
+- **Kubiya API Key** - [Get yours here](https://app.kubiya.ai/settings#apiKeys)
 
-### Step 1: Install Kubiya CLI
+### Step 1: Clone the Repository
+
+```bash
+git clone https://github.com/kubiyabot/agentic_ci_cd_examples.git
+cd agentic_ci_cd_examples
+```
+
+### Step 2: Set Up Environment
+
+```bash
+# Copy the example .env file
+cp .env.example .env
+
+# Edit .env with your credentials:
+# KUBIYA_API_KEY=your-api-key-here
+# KUBIYA_AGENT_UUID=your-agent-uuid (optional, for direct execution)
+```
+
+### Step 3: Install Kubiya CLI
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/kubiyabot/cli/main/install.sh | bash
+
+# Add to your PATH (add to ~/.bashrc or ~/.zshrc for persistence)
+export PATH="$HOME/.kubiya/bin:$PATH"
 ```
 
 Verify installation:
 ```bash
 kubiya --version
 # Output: kubiya version 1.x.x
+
+# Authenticate
+kubiya auth status
 ```
 
-### Step 2: Set Your API Key
+### Step 4: Install Dependencies
 
 ```bash
-export KUBIYA_API_KEY="your-api-key-here"
+make setup
 ```
 
-### Step 3: Clone and Run
+### Step 5: Run Your First Example
 
 ```bash
-# Clone the repository
-git clone https://github.com/kubiyabot/agentic_ci_cd_examples.git
-cd agentic_ci_cd_examples
+# Source your environment variables
+source .env
 
-# Try Example 1: Flaky Test Detection
-cd fleaky-tests-circleci
-npm install
-
-# First, see the problem - run all tests (some will fail randomly)
-npm run test:all
-
-# Now see the solution - Kubiya runs only stable tests
-kubiya exec "Analyze __tests__/flaky/ for flaky patterns, then run only stable tests with npm run test:unit" --local --cwd . --yes
+# Run flaky test detection with Kubiya
+make test-flaky-kubiya
 ```
 
-### Expected Output
+---
 
+## Makefile Commands
+
+The Makefile provides easy commands to run all examples:
+
+```bash
+# See all available commands
+make help
 ```
-=== Flaky Test Analysis ===
 
-Scanning __tests__/flaky/ for flaky patterns...
+### Setup & Environment
 
-Found 2 flaky tests:
+| Command | Description |
+|---------|-------------|
+| `make setup` | Install dependencies for all examples |
+| `make check-env` | Verify environment is configured |
 
-1. random-failure.test.ts
-   Pattern: Math.random() > 0.7
-   Issue: Fails ~30% of the time randomly
+### Flaky Test Detection
 
-2. environment-dependent.test.ts
-   Pattern: new Date().getHours()
-   Issue: Fails at certain hours
+| Command | Description |
+|---------|-------------|
+| `make test-flaky` | Run ALL tests (shows flaky failures) |
+| `make test-flaky-stable` | Run only stable tests |
+| `make test-flaky-kubiya` | Run with Kubiya agent |
 
-=== Running Stable Tests ===
+### Smart Test Selection
 
-Executing: npm run test:unit
+| Command | Description |
+|---------|-------------|
+| `make test-smart` | Run ALL tests |
+| `make test-smart-tasks` | Run only tasks module tests |
+| `make test-smart-kubiya` | Run with Kubiya agent |
 
-PASS  __tests__/unit/utils.test.ts
-PASS  __tests__/unit/payment-processor.test.ts
-PASS  __tests__/unit/user-service.test.ts
+### Utilities
 
-Test Suites: 3 passed, 3 total
-Tests:       6 passed, 6 total
+| Command | Description |
+|---------|-------------|
+| `make demo` | Run full demo (all examples) |
+| `make clean` | Clean up node_modules and coverage |
 
-=== Summary ===
-Stable tests: 6 passed
-Flaky tests:  6 skipped
-Result: SUCCESS
+---
+
+## The `kubiya exec` Command
+
+### Basic Syntax
+
+```bash
+# Planning mode (recommended for local testing)
+kubiya exec "PROMPT" --local --cwd . --yes
+
+# Direct agent execution (for CI/CD with remote workers)
+kubiya exec agent AGENT_UUID "PROMPT" --cwd . --yes
+
+# Team execution
+kubiya exec team TEAM_ID "PROMPT" --cwd . --yes
 ```
+
+### Essential Flags
+
+| Flag | Purpose |
+|------|---------|
+| `"<instruction>"` | Natural language description of what you want |
+| `--local` | Run with ephemeral local worker (creates temporary worker) |
+| `--cwd .` | **CRITICAL:** Set working directory for file/git access |
+| `--yes, -y` | Auto-approve plans (required for CI/CD) |
+| `--non-interactive` | Skip all prompts for automation |
+| `--output, -o` | Output format (text/json/yaml) |
+| `--priority` | Task priority (low/medium/high/critical) |
+
+### Execution Modes
+
+**Planning Mode (Recommended for Local):**
+```bash
+kubiya exec "analyze tests and run only stable ones" --local --cwd . --yes
+```
+- Automatically selects best agent/team
+- Generates execution plan with cost estimation
+- Creates ephemeral worker for execution
+- Best for local testing and development
+
+**Direct Agent Mode (For CI/CD):**
+```bash
+kubiya exec agent $KUBIYA_AGENT_UUID "run tests" --cwd . --yes
+```
+- Bypasses planning phase
+- Faster execution
+- Requires pre-configured agent UUID
+- Best for production CI/CD pipelines
+
+### Important Notes
+
+1. **Always use `--cwd .`** - This flag is critical for the agent to access files in your repository
+2. **Planning mode for local** - Use `kubiya exec "prompt"` with `--local` for local testing
+3. **Export API key** - Ensure `KUBIYA_API_KEY` is exported: `export KUBIYA_API_KEY="your-key"`
 
 ---
 
@@ -170,10 +267,12 @@ Result: SUCCESS
 │  │                    KUBIYA AGENT                               │   │
 │  │                                                               │   │
 │  │   1. READ      → Scans your codebase                         │   │
-│  │   2. ANALYZE   → Understands what changed (git diff)         │   │
-│  │   3. DECIDE    → Determines what tests to run                │   │
-│  │   4. EXECUTE   → Runs only necessary tests                   │   │
-│  │   5. REPORT    → Explains what it did and why                │   │
+│  │   2. RECALL    → Checks cognitive memory for past learnings  │   │
+│  │   3. ANALYZE   → Understands what changed (git diff)         │   │
+│  │   4. DECIDE    → Determines what tests to run                │   │
+│  │   5. EXECUTE   → Runs only necessary tests                   │   │
+│  │   6. STORE     → Saves learnings to cognitive memory         │   │
+│  │   7. REPORT    → Explains what it did and why                │   │
 │  │                                                               │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 │         │                                                            │
@@ -185,19 +284,143 @@ Result: SUCCESS
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
+### Execution Lifecycle
+
+1. **Request Submission** - Your prompt is sent to Kubiya
+2. **Planning** - Agent analyzes the task and creates execution plan
+3. **Worker Deployment** - Ephemeral worker spins up (with `--local`)
+4. **Execution** - Agent runs commands with real-time streaming output
+5. **Memory Storage** - Learnings are stored for future reference
+6. **Completion** - Results returned, worker cleaned up
+
+---
+
+## Cognitive Memory
+
+Kubiya includes a **Cognitive Memory** system that enables agents to learn and remember across sessions. This is a key differentiator from stateless AI systems.
+
+### What is Cognitive Memory?
+
+Cognitive Memory provides persistent, semantic knowledge storage that enables AI agents to:
+- **Learn** from each execution
+- **Remember** context across sessions
+- **Recall** relevant information using semantic search
+- **Share** knowledge between agents in the same organization
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                      COGNITIVE MEMORY SYSTEM                         │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌────────────────┐    ┌────────────────┐    ┌────────────────┐    │
+│  │   INGESTION    │ →  │  KNOWLEDGE     │ →  │   SEMANTIC     │    │
+│  │                │    │  GRAPH         │    │   SEARCH       │    │
+│  │ - Chunking     │    │ - Entities     │    │ - Natural lang │    │
+│  │ - Embedding    │    │ - Relations    │    │ - Similarity   │    │
+│  │ - Indexing     │    │ - Context      │    │ - Ranking      │    │
+│  └────────────────┘    └────────────────┘    └────────────────┘    │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Key Capabilities
+
+| Feature | Description |
+|---------|-------------|
+| **Semantic Search** | Natural language queries instead of keyword matching |
+| **Temporal Memory** | Time-aware information retrieval |
+| **Knowledge Extraction** | Automatic entity and relationship identification |
+| **Cross-Agent Sharing** | Agents in same environment share knowledge |
+
+### Agent Memory Operations
+
+Agents automatically have access to these memory functions:
+
+```python
+# Store context with metadata
+store_memory(content, metadata)
+
+# Semantic search for relevant memories
+recall_memory(query, limit)
+
+# List stored memories
+list_memories()
+
+# Access dataset details
+get_dataset_info()
+```
+
+### Dataset Scopes
+
+| Scope | Visibility | Use Case |
+|-------|------------|----------|
+| **USER** | Private to agent/user | Personal notes, agent-specific learning |
+| **ORG** | Organization-wide (default) | Team knowledge, shared solutions |
+| **ROLE** | Role-based access | Sensitive procedures, compliance docs |
+
+### Cross-Agent Coordination Example
+
+```
+Agent A: Detects node failure, starts recovery
+         → Stores: "Cluster A recovering, do not deploy"
+
+Agent B: Needs to deploy, first recalls memory
+         → Finds: "Cluster A recovering, do not deploy"
+         → Intelligently waits until recovery completes
+```
+
+This prevents conflicting operations and enables distributed workflow coordination.
+
+### Managing Datasets via CLI
+
+```bash
+# Create a dataset
+kubiya cognitive dataset create production-runbooks \
+  --scope org \
+  --description "Production environment runbooks"
+
+# List datasets
+kubiya cognitive dataset list
+
+# View dataset details
+kubiya cognitive dataset get production-runbooks
+
+# Delete dataset
+kubiya cognitive dataset delete production-runbooks --confirm
+```
+
+### Best Practices
+
+1. **Store rich context** - Include details about what was done and why
+2. **Use ORG scope** - Enable knowledge sharing across your team
+3. **Environment isolation** - Datasets auto-isolate by environment (prod, staging)
+4. **Regular cleanup** - Remove outdated memories to keep searches relevant
+
 ---
 
 ## CircleCI Integration
 
-Both examples include working `.circleci/config.yml` files. Here's how to use them:
+Both examples include working `.circleci/config.yml` files.
 
-### 1. Add Your API Key to CircleCI
+### Required Environment Variables
 
-Go to **Project Settings** > **Environment Variables** > Add:
-- Name: `KUBIYA_API_KEY`
-- Value: Your Kubiya API key
+Set these in your CircleCI context (e.g., `kubiya-secrets`):
 
-### 2. The Pipeline Configuration
+| Variable | Description |
+|----------|-------------|
+| `KUBIYA_API_KEY` | Your Kubiya API key |
+| `KUBIYA_AGENT_UUID` | Agent UUID for direct execution |
+| `KUBIYA_NON_INTERACTIVE` | Set to `true` for CI environments |
+
+### Setup Steps
+
+1. **Create a CircleCI context** named `kubiya-secrets`
+2. **Add environment variables** to the context
+3. **Push your code** and watch intelligent CI in action
+
+### Example Pipeline Configuration
 
 ```yaml
 version: 2.1
@@ -206,6 +429,8 @@ jobs:
   intelligent-test:
     docker:
       - image: cimg/node:20.11
+    environment:
+      KUBIYA_NON_INTERACTIVE: "true"
     steps:
       - checkout
 
@@ -222,57 +447,67 @@ jobs:
       - run:
           name: Intelligent Test Execution
           command: |
-            kubiya exec "
+            kubiya exec agent ${KUBIYA_AGENT_UUID} "
               Analyze the codebase and run tests intelligently.
               Skip flaky tests, run only what's needed.
-            " --local --cwd . --yes
+            " --cwd . --yes
 
 workflows:
   test:
     jobs:
       - intelligent-test:
-          context: kubiya  # Contains KUBIYA_API_KEY
+          context: kubiya-secrets
 ```
 
-### 3. Push and Watch
+### Local Testing Note
+
+**Important:** `circleci local execute` has limitations with environment variable handling. For local testing, use the Makefile targets instead:
 
 ```bash
-git push origin main
-# CircleCI runs with intelligent test selection
+# Instead of: circleci local execute test-with-kubiya
+# Use:
+make test-flaky-kubiya
+make test-smart-kubiya
 ```
 
 ---
 
-## Key Concepts
+## Repository Structure
 
-### The `kubiya exec` Command
-
-```bash
-kubiya exec "<instruction>" --local --cwd . --yes
 ```
-
-| Flag | Purpose |
-|------|---------|
-| `"<instruction>"` | Natural language description of what you want |
-| `--local` | Run the agent locally (in your CI environment) |
-| `--cwd .` | Set working directory to current folder |
-| `--yes` | Auto-confirm actions (required for CI) |
-
-### What the Agent Can Do
-
-- **Read files** - Understands your code structure
-- **Run commands** - Executes npm, git, shell commands
-- **Analyze output** - Interprets test results, errors
-- **Make decisions** - Chooses what to run based on context
-- **Report results** - Explains actions in human-readable format
-
-### Why `--local` Mode?
-
-The `--local` flag runs the Kubiya agent directly in your CI environment. This means:
-- Full access to your codebase
-- Can run any command (npm, git, etc.)
-- No data leaves your CI runner
-- Works with any CI provider (CircleCI, GitHub Actions, Jenkins, etc.)
+agentic_ci_cd_examples/
+├── README.md                          # This file
+├── Makefile                           # Easy-run commands
+├── .env.example                       # Environment variable template
+├── .env                               # Your local config (gitignored)
+│
+├── fleaky-tests-circleci/             # Example 1: Flaky test detection
+│   ├── __tests__/
+│   │   ├── unit/                      # Stable tests (always pass)
+│   │   │   ├── utils.test.ts
+│   │   │   ├── payment-processor.test.ts
+│   │   │   └── user-service.test.ts
+│   │   ├── flaky/                     # Intentionally flaky tests
+│   │   │   ├── random-failure.test.ts
+│   │   │   └── environment-dependent.test.ts
+│   │   └── integration/
+│   │       └── api.test.ts
+│   ├── lib/                           # Application code
+│   ├── .circleci/config.yml           # CircleCI configuration
+│   ├── package.json
+│   └── README.md                      # Detailed documentation
+│
+└── smart-test-selection/              # Example 2: Smart test selection
+    ├── src/
+    │   ├── tasks/                     # Tasks module + tests (13 tests)
+    │   ├── projects/                  # Projects module + tests (17 tests)
+    │   ├── comments/                  # Comments module + tests (6 tests)
+    │   ├── tags/                      # Tags module + tests (8 tests)
+    │   └── search/                    # Search module + tests (10 tests)
+    ├── .circleci/config.yml           # CircleCI configuration
+    ├── package.json
+    └── README.md                      # Detailed documentation
+```
 
 ---
 
@@ -283,35 +518,10 @@ The `--local` flag runs the Kubiya agent directly in your CI environment. This m
 | **Configuration** | Complex YAML, caching rules | One command |
 | **Test selection** | Run everything or manual rules | Automatic based on changes |
 | **Flaky tests** | Manual tracking, retries | Auto-detected and skipped |
+| **Knowledge retention** | None - stateless | Cognitive memory learns |
+| **Cross-run learning** | Not possible | Agents remember solutions |
 | **Maintenance** | Update rules as code changes | Self-adapting |
 | **Time to setup** | Hours/days | 5 minutes |
-
----
-
-## Repository Structure
-
-```
-agentic_ci_cd_examples/
-├── README.md                          # This file
-├── .env.example                       # Environment variable template
-│
-├── fleaky-tests-circleci/             # Example 1: Flaky test detection
-│   ├── __tests__/
-│   │   ├── unit/                      # Stable tests (always pass)
-│   │   └── flaky/                     # Intentionally flaky tests
-│   ├── lib/                           # Application code
-│   ├── .circleci/config.yml           # CircleCI configuration
-│   ├── package.json
-│   └── README.md                      # Detailed documentation
-│
-└── smart-test-selection/              # Example 2: Smart test selection
-    ├── src/
-    │   ├── tasks/                     # Tasks module + tests
-    │   └── projects/                  # Projects module + tests
-    ├── .circleci/config.yml           # CircleCI configuration
-    ├── package.json
-    └── README.md                      # Detailed documentation
-```
 
 ---
 
@@ -319,22 +529,58 @@ agentic_ci_cd_examples/
 
 ### "Command not found: kubiya"
 
-The CLI isn't in your PATH. Run:
+The CLI isn't in your PATH:
 ```bash
 export PATH="$HOME/.kubiya/bin:$PATH"
+
+# Add to ~/.bashrc or ~/.zshrc for persistence
+echo 'export PATH="$HOME/.kubiya/bin:$PATH"' >> ~/.zshrc
 ```
 
-### "Invalid API key"
+### "KUBIYA_API_KEY is not set"
 
-Make sure your API key is set:
+Source your .env file:
+```bash
+source .env
+
+# Or export directly
+export KUBIYA_API_KEY="your-api-key-here"
+```
+
+### "Invalid API key" or "Authentication failed"
+
+Verify your API key:
 ```bash
 echo $KUBIYA_API_KEY
-# Should print your key
+kubiya auth status
 ```
 
-### Agent taking too long
+### Agent not finding files
 
-Add `--output json` for structured output, or check your network connection to Kubiya's API.
+Make sure you're using the `--cwd .` flag:
+```bash
+kubiya exec "..." --local --cwd . --yes
+#                          ^^^^^^ Critical!
+```
+
+### "422 error: worker_queue_id required"
+
+This happens with direct agent execution (`kubiya exec agent <UUID>`) using `--local`. Use planning mode instead:
+```bash
+# Instead of:
+kubiya exec agent $UUID "..." --local --cwd . --yes
+
+# Use:
+kubiya exec "..." --local --cwd . --yes
+```
+
+### Timeout connecting to control plane
+
+This is usually transient. Retry the command:
+```bash
+# Wait a few seconds and retry
+make test-flaky-kubiya
+```
 
 ---
 
@@ -342,7 +588,8 @@ Add `--output json` for structured output, or check your network connection to K
 
 - **[Kubiya Documentation](https://docs.kubiya.ai/)** - Full platform documentation
 - **[kubiya exec Reference](https://docs.kubiya.ai/cli/on-demand-execution)** - Detailed CLI guide
-- **[Get API Key](https://app.kubiya.ai)** - Sign up and get your key
+- **[Cognitive Memory](https://docs.kubiya.ai/core-concepts/cognitive-memory/overview)** - Memory system docs
+- **[Get API Key](https://app.kubiya.ai/settings#apiKeys)** - Sign up and get your key
 
 ---
 

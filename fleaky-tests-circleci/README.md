@@ -6,12 +6,32 @@ This example shows how Kubiya agents can automatically detect flaky tests in you
 
 ---
 
+## Table of Contents
+
+- [The Problem](#the-problem)
+- [The Solution](#the-solution)
+- [Quick Start](#quick-start)
+- [Using the Makefile](#using-the-makefile-recommended)
+- [Project Structure](#project-structure)
+- [Flaky Patterns Detected](#flaky-patterns-detected)
+- [Available npm Scripts](#available-npm-scripts)
+- [The `kubiya exec` Command](#the-kubiya-exec-command)
+- [CircleCI Integration](#circleci-integration)
+- [How It Works](#how-it-works)
+- [Cognitive Memory Integration](#cognitive-memory-integration)
+- [Results](#results)
+- [Customization](#customization)
+- [Troubleshooting](#troubleshooting)
+- [Learn More](#learn-more)
+
+---
+
 ## The Problem
 
 You've seen this before:
 
 ```
-FAIL  __tests__/checkout.test.ts
+FAIL  __tests__/flaky/random-failure.test.ts
   ● should process payment
     Timeout - waited 5000ms
 
@@ -40,6 +60,7 @@ The Kubiya agent:
 3. Skips flaky tests automatically
 4. Runs only stable tests
 5. Reports what was skipped and why
+6. **Stores findings in cognitive memory** for future reference
 
 ---
 
@@ -47,9 +68,9 @@ The Kubiya agent:
 
 ### Prerequisites
 
-- **Node.js 20+**
+- **Node.js 20+** - [Download](https://nodejs.org/)
 - **Kubiya CLI** - [Installation guide](https://docs.kubiya.ai/cli)
-- **Kubiya API Key** - [Get yours here](https://app.kubiya.ai)
+- **Kubiya API Key** - [Get yours here](https://app.kubiya.ai/settings#apiKeys)
 
 ### Step 1: Clone and Install
 
@@ -62,10 +83,34 @@ npm install
 ### Step 2: Set Your API Key
 
 ```bash
-export KUBIYA_API_KEY="your-api-key-here"
+# Copy the example .env file in the parent directory
+cp ../.env.example ../.env
+
+# Edit ../.env with your credentials:
+# KUBIYA_API_KEY=your-api-key-here
+# KUBIYA_AGENT_UUID=your-agent-uuid (optional, for direct execution)
+
+# Source the .env file
+source ../.env
+
+# Verify it's set
+echo $KUBIYA_API_KEY
 ```
 
-### Step 3: See the Problem
+### Step 3: Install Kubiya CLI (if not already installed)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kubiyabot/cli/main/install.sh | bash
+
+# Add to PATH
+export PATH="$HOME/.kubiya/bin:$PATH"
+
+# Verify
+kubiya --version
+kubiya auth status
+```
+
+### Step 4: See the Problem
 
 Run all tests including the flaky ones:
 
@@ -103,7 +148,7 @@ Tests:       4 failed, 8 passed, 12 total
 
 **Run it again** - you'll get different results. Some runs pass, some fail. That's flaky.
 
-### Step 4: See the Solution
+### Step 5: See the Solution
 
 Now let Kubiya handle it:
 
@@ -162,6 +207,28 @@ Result: SUCCESS
 
 ---
 
+## Using the Makefile (Recommended)
+
+The easiest way to run this example is using the Makefile from the parent directory:
+
+```bash
+cd ..  # Go to agentic_ci_cd_examples root
+
+# See all available commands
+make help
+
+# Run ALL tests (shows flaky failures)
+make test-flaky
+
+# Run only stable tests
+make test-flaky-stable
+
+# Run with Kubiya agent
+make test-flaky-kubiya
+```
+
+---
+
 ## Project Structure
 
 ```
@@ -209,8 +276,47 @@ fleaky-tests-circleci/
 |---------|--------------|-----------|
 | `npm run test:all` | Run everything (including flaky) | 12 |
 | `npm run test:unit` | Run only stable unit tests | 6 |
+| `npm run test:stable` | Run only stable unit tests | 6 |
 | `npm run test:flaky` | Run only flaky tests (demo) | 4 |
 | `npm run test:integration` | Run integration tests | 4 |
+
+---
+
+## The `kubiya exec` Command
+
+### Basic Syntax
+
+```bash
+kubiya exec "<instruction>" --local --cwd . --yes
+```
+
+### Essential Flags
+
+| Flag | Purpose |
+|------|---------|
+| `"<instruction>"` | Natural language description of what you want |
+| `--local` | Run with ephemeral local worker |
+| `--cwd .` | **CRITICAL:** Set working directory to current folder |
+| `--yes` | Auto-confirm actions (required for CI) |
+
+### Execution Modes
+
+**Planning Mode (Recommended for Local):**
+```bash
+kubiya exec "Analyze tests for flaky patterns" --local --cwd . --yes
+```
+- Automatically selects best agent
+- Creates ephemeral worker
+- Works reliably for local testing
+
+**Direct Agent Mode (For CI/CD):**
+```bash
+kubiya exec agent <AGENT_UUID> "run stable tests" --cwd . --yes
+```
+- Bypasses planning phase
+- Faster execution
+- Requires pre-configured agent UUID
+- Best for production CI/CD with remote workers
 
 ---
 
@@ -218,18 +324,29 @@ fleaky-tests-circleci/
 
 The included `.circleci/config.yml` runs Kubiya automatically on every push.
 
-### Setup
+### Required Environment Variables
 
-1. **Add your API key to CircleCI:**
-   - Go to Project Settings > Environment Variables
-   - Add `KUBIYA_API_KEY` with your key
+Set these in your CircleCI context (e.g., `kubiya-secrets`):
 
-2. **Push your code:**
+| Variable | Description |
+|----------|-------------|
+| `KUBIYA_API_KEY` | Your Kubiya API key |
+| `KUBIYA_AGENT_UUID` | Agent UUID for direct execution |
+| `KUBIYA_NON_INTERACTIVE` | Set to `true` (automatically set in config) |
+
+### Setup Steps
+
+1. **Create a CircleCI context** named `kubiya-secrets`
+2. **Add environment variables** to the context:
+   - `KUBIYA_API_KEY`: Your API key
+   - `KUBIYA_AGENT_UUID`: Your agent UUID
+
+3. **Push your code:**
    ```bash
    git push origin main
    ```
 
-3. **Watch intelligent CI in action.**
+4. **Watch intelligent CI in action.**
 
 ### The Pipeline
 
@@ -237,9 +354,11 @@ The included `.circleci/config.yml` runs Kubiya automatically on every push.
 version: 2.1
 
 jobs:
-  intelligent-test:
+  test-with-kubiya:
     docker:
       - image: cimg/node:20.11
+    environment:
+      KUBIYA_NON_INTERACTIVE: "true"
     steps:
       - checkout
 
@@ -256,20 +375,38 @@ jobs:
       - run:
           name: Intelligent Test Execution
           command: |
-            kubiya exec "
-              You are a CI/CD agent analyzing tests for flaky patterns.
+            kubiya exec agent ${KUBIYA_AGENT_UUID} "
+              You are an intelligent CI/CD agent analyzing tests for flaky patterns.
 
-              STEP 1: Scan __tests__/flaky/ for flaky patterns
-              STEP 2: Report what you found and why each test is flaky
-              STEP 3: Run only stable tests: npm run test:unit
-              STEP 4: Report summary
-            " --local --cwd . --yes
+              STEP 1: Analyze flaky test directory:
+              List files in __tests__/flaky/ and analyze each for flaky patterns.
+
+              STEP 2: Report findings:
+              For each flaky test found, explain the type of flakiness.
+
+              STEP 3: Run stable tests only:
+              Execute: npm run test:unit
+
+              STEP 4: Summary:
+              Report how many tests were run vs skipped.
+            " --cwd . --yes
 
 workflows:
-  test:
+  intelligent-testing:
     jobs:
-      - intelligent-test:
-          context: kubiya
+      - test-with-kubiya:
+          context:
+            - kubiya-secrets
+```
+
+### Local Testing Note
+
+**Important:** `circleci local execute` has limitations with environment variable handling. For local testing, use the Makefile targets instead:
+
+```bash
+# Instead of: circleci local execute test-with-kubiya
+# Use:
+make test-flaky-kubiya
 ```
 
 ---
@@ -278,7 +415,7 @@ workflows:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    kubiya exec --local                       │
+│                    kubiya exec --local --cwd .              │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
 │  1. SCAN                                                     │
@@ -296,11 +433,55 @@ workflows:
 │  4. EXECUTE                                                  │
 │     └── npm run test:unit (stable only)                     │
 │                                                              │
-│  5. SUMMARIZE                                                │
+│  5. STORE                                                    │
+│     └── Save findings to cognitive memory                   │
+│                                                              │
+│  6. SUMMARIZE                                                │
 │     └── Tests run: 6, skipped: 6, all passed               │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Cognitive Memory Integration
+
+Kubiya agents use **Cognitive Memory** to learn and remember across sessions:
+
+### How It Benefits This Example
+
+1. **Pattern Recognition** - Agent stores detected flaky patterns
+2. **Cross-Session Learning** - Remembers which tests were flaky in previous runs
+3. **Team Knowledge Sharing** - Other agents in your org can access flaky test findings
+4. **Continuous Improvement** - Agent gets smarter over time
+
+### Memory Operations
+
+```python
+# Agent automatically stores findings
+store_memory(
+    content="random-failure.test.ts uses Math.random() causing 30% failure rate",
+    metadata={
+        "category": "flaky-test",
+        "file": "random-failure.test.ts",
+        "pattern": "Math.random()",
+        "environment": "test"
+    }
+)
+
+# Agent recalls past findings on subsequent runs
+recall_memory("flaky test patterns in this repository")
+```
+
+### Semantic Search
+
+When running, the agent uses semantic search to find relevant past learnings:
+
+| Query | What It Finds |
+|-------|---------------|
+| "flaky tests" | All previously detected flaky tests |
+| "random failure patterns" | Tests using Math.random() |
+| "timing issues" | Tests with Date/time dependencies |
 
 ---
 
@@ -312,6 +493,7 @@ workflows:
 | Flaky failures per day | 2-5 | 0 |
 | CI pass rate | ~70% | 100% |
 | Time wasted on re-runs | Hours | Zero |
+| Knowledge retained | None | Stored in memory |
 
 ---
 
@@ -346,12 +528,87 @@ kubiya exec "
 " --local --cwd . --yes
 ```
 
+### Custom Pattern Detection
+
+```bash
+kubiya exec "
+  Read all test files in __tests__/
+
+  Mark as flaky if the test:
+  - Uses any global state
+  - Depends on network calls
+  - Uses timers without mocking
+  - Accesses external services
+
+  Generate a flaky-tests.json report.
+  Run only tests NOT in the flaky list.
+" --local --cwd . --yes
+```
+
+---
+
+## Troubleshooting
+
+### "Command not found: kubiya"
+
+The CLI isn't in your PATH:
+```bash
+export PATH="$HOME/.kubiya/bin:$PATH"
+
+# Add to ~/.bashrc or ~/.zshrc for persistence
+echo 'export PATH="$HOME/.kubiya/bin:$PATH"' >> ~/.zshrc
+```
+
+### "KUBIYA_API_KEY is not set"
+
+Source your .env file:
+```bash
+source ../.env
+
+# Or export directly
+export KUBIYA_API_KEY="your-api-key-here"
+```
+
+Or use the Makefile (which loads .env automatically):
+```bash
+make test-flaky-kubiya
+```
+
+### Agent not finding files
+
+Make sure you're using `--cwd .` flag:
+```bash
+kubiya exec "..." --local --cwd . --yes
+#                          ^^^^^^ Critical!
+```
+
+### "422 error: worker_queue_id required"
+
+This happens with direct agent execution using `--local`. Use planning mode:
+```bash
+# Instead of:
+kubiya exec agent $UUID "..." --local --cwd . --yes
+
+# Use:
+kubiya exec "..." --local --cwd . --yes
+```
+
+### Tests still failing
+
+Check that you're running stable tests only:
+```bash
+npm run test:stable
+# or
+npm run test:unit
+```
+
 ---
 
 ## Learn More
 
 - **[Kubiya Documentation](https://docs.kubiya.ai/)**
 - **[kubiya exec Reference](https://docs.kubiya.ai/cli/on-demand-execution)**
+- **[Cognitive Memory](https://docs.kubiya.ai/core-concepts/cognitive-memory/overview)**
 - **[Main Examples README](../README.md)**
 
 ---
@@ -359,5 +616,6 @@ kubiya exec "
 ## Next Steps
 
 1. Try the **[Smart Test Selection](../smart-test-selection/)** example
-2. Add Kubiya to your own CI pipeline
-3. Create custom prompts for your specific flaky test patterns
+2. Combine both patterns: smart selection + flaky detection
+3. Add Kubiya to your own CI pipeline
+4. Leverage cognitive memory for continuous improvement

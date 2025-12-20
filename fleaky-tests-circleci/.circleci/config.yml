@@ -11,8 +11,16 @@ version: 2.1
 # 4. Run only stable tests
 # 5. Report findings with reasoning
 #
-# All kubiya exec commands go through the Control Plane API Gateway
-# Zero configuration needed - just set KUBIYA_API_KEY
+# Required Environment Variables (set in CircleCI context 'kubiya-secrets'):
+#   - KUBIYA_API_KEY: Your Kubiya API key
+#   - KUBIYA_AGENT_UUID: Agent UUID for direct execution (no planning)
+#
+# Note: For local testing, use the Makefile targets instead of circleci local execute
+#       (circleci local execute has issues with environment variable handling)
+#
+# Local testing:
+#   make test-flaky-kubiya        # With planning
+#   make test-flaky-kubiya-direct # Direct agent execution
 # =============================================================================
 
 jobs:
@@ -61,12 +69,14 @@ jobs:
 
   # ==========================================================================
   # INTELLIGENT APPROACH: Kubiya analyzes and skips flaky tests
+  # Uses direct agent execution (no planning phase) for faster CI/CD
   # ==========================================================================
   test-with-kubiya:
     docker:
       - image: cimg/node:20.11
     environment:
-      KUBIYA_API_KEY: ${KUBIYA_API_KEY}
+      # Note: In real CircleCI, use contexts for secrets
+      # For local execute, pass via: -e KB_KEY="..." -e KB_AGENT="..."
       KUBIYA_NON_INTERACTIVE: "true"
     steps:
       - run:
@@ -105,9 +115,16 @@ jobs:
             cd repo/fleaky-tests-circleci
 
             echo "=== KUBIYA INTELLIGENT TEST EXECUTION ==="
+            echo "Using direct agent execution (no planning phase)"
             echo ""
 
-            kubiya exec "
+            # Set credentials from env vars (use KB_KEY/KB_AGENT for local, KUBIYA_* for real CI)
+            export KUBIYA_API_KEY="${KB_KEY:-$KUBIYA_API_KEY}"
+            AGENT_UUID="${KB_AGENT:-$KUBIYA_AGENT_UUID}"
+
+            echo "Agent UUID: ${AGENT_UUID:0:8}..."
+
+            kubiya exec agent "${AGENT_UUID}" "
             You are an intelligent CI/CD agent analyzing tests for flaky patterns.
 
             CONTEXT:
@@ -128,20 +145,14 @@ jobs:
             - File path
             - Type of flakiness (RANDOM, TIMING, ASYNC)
             - Why it would fail intermittently
-            - Recommended fix
 
             STEP 3 - Run stable tests only:
             Execute: npm run test:unit
             This runs only the stable unit tests, skipping flaky ones.
 
             STEP 4 - Summary:
-            Report:
-            - How many tests were run vs skipped
-            - Time saved by skipping flaky tests
-            - Overall test results
-
-            Be thorough in your analysis and clear in your reporting.
-            " --local --cwd $(pwd) --yes
+            Report how many tests were run vs skipped and overall results.
+            " --local --cwd . --yes
 
             echo ""
             echo "=== Kubiya execution complete ==="

@@ -11,8 +11,16 @@ version: 2.1
 # 4. Run only relevant test suites
 # 5. Skip unaffected modules entirely
 #
-# All kubiya exec commands go through the Control Plane API Gateway
-# Zero configuration needed - just set KUBIYA_API_KEY
+# Required Environment Variables (set in CircleCI context 'kubiya-secrets'):
+#   - KUBIYA_API_KEY: Your Kubiya API key
+#   - KUBIYA_AGENT_UUID: Agent UUID for direct execution (no planning)
+#
+# Note: For local testing, use the Makefile targets instead of circleci local execute
+#       (circleci local execute has issues with environment variable handling)
+#
+# Local testing:
+#   make test-smart-kubiya        # With planning
+#   make test-smart-kubiya-direct # Direct agent execution
 # =============================================================================
 
 jobs:
@@ -61,12 +69,14 @@ jobs:
 
   # ==========================================================================
   # INTELLIGENT APPROACH: Kubiya analyzes changes and runs only relevant tests
+  # Uses direct agent execution (no planning phase) for faster CI/CD
   # ==========================================================================
   test-intelligent:
     docker:
       - image: cimg/node:20.11
     environment:
       KUBIYA_API_KEY: ${KUBIYA_API_KEY}
+      KUBIYA_AGENT_UUID: ${KUBIYA_AGENT_UUID}
       KUBIYA_NON_INTERACTIVE: "true"
     steps:
       - run:
@@ -111,9 +121,10 @@ jobs:
             cd repo/smart-test-selection
 
             echo "=== KUBIYA INTELLIGENT TEST SELECTION ==="
+            echo "Using direct agent: ${KUBIYA_AGENT_UUID}"
             echo ""
 
-            kubiya exec "
+            kubiya exec agent ${KUBIYA_AGENT_UUID} "
             You are an intelligent CI/CD agent that runs only relevant tests.
 
             CONTEXT:
@@ -122,43 +133,26 @@ jobs:
             - This is a modular Node.js app with independent modules
 
             MODULE STRUCTURE:
-            - src/tasks/ → npm run test:tasks (13 tests - task CRUD operations)
-            - src/projects/ → npm run test:projects (17 tests - project management)
-            - src/comments/ → npm run test:comments (6 tests - comment management)
-            - src/tags/ → npm run test:tags (8 tests - tag management)
-            - src/search/ → npm run test:search (10 tests - search & filtering)
+            - src/tasks/ → npm run test:tasks (13 tests)
+            - src/projects/ → npm run test:projects (17 tests)
+            - src/comments/ → npm run test:comments (6 tests)
+            - src/tags/ → npm run test:tags (8 tests)
+            - src/search/ → npm run test:search (10 tests)
 
             TASK: Analyze changes and run only affected tests
 
             STEP 1 - Check what changed:
             Run: git diff HEAD~1 --name-only 2>/dev/null || git diff origin/main --name-only 2>/dev/null || echo 'No diff available'
-
             If no diff available, run all tests.
 
-            STEP 2 - Map changes to modules:
-            For each changed file:
-            - src/tasks/* → affects 'tasks' module
-            - src/projects/* → affects 'projects' module
-            - src/comments/* → affects 'comments' module
-            - src/tags/* → affects 'tags' module
-            - src/search/* → affects 'search' module
-            - package.json → affects ALL modules (run all tests)
-            - README.md, docs/* → affects NOTHING (skip tests)
+            STEP 2 - Map changes to modules and run only affected test commands.
+            - src/tasks/* → npm run test:tasks
+            - src/projects/* → npm run test:projects
+            - package.json → npm run test:all
+            - README.md, docs/* → skip tests
 
-            STEP 3 - Execute targeted tests:
-            Based on affected modules, run ONLY the affected test commands.
-            If multiple modules affected, run each module's tests.
-            If only docs changed: echo 'No tests needed'
-
-            STEP 4 - Report efficiency:
-            Calculate and report:
-            - Total tests in project: 54
-            - Tests actually run: X
-            - Tests skipped: Y
-            - Percentage saved: Z%
-
-            Be efficient - only run what's necessary!
-            " --local --cwd $(pwd) --yes
+            STEP 3 - Report efficiency (tests run vs total 54).
+            " --local --cwd . --yes
 
             echo ""
             echo "=== Kubiya execution complete ==="

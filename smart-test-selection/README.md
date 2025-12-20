@@ -6,6 +6,26 @@ This example shows how Kubiya agents can analyze your git diff and run only the 
 
 ---
 
+## Table of Contents
+
+- [The Problem](#the-problem)
+- [The Solution](#the-solution)
+- [Quick Start](#quick-start)
+- [Using the Makefile](#using-the-makefile-recommended)
+- [Project Structure](#project-structure)
+- [Change to Test Mapping](#change-to-test-mapping)
+- [Available npm Scripts](#available-npm-scripts)
+- [The `kubiya exec` Command](#the-kubiya-exec-command)
+- [CircleCI Integration](#circleci-integration)
+- [How It Works](#how-it-works)
+- [Cognitive Memory Integration](#cognitive-memory-integration)
+- [Results](#results)
+- [Customization](#customization)
+- [Troubleshooting](#troubleshooting)
+- [Learn More](#learn-more)
+
+---
+
 ## The Problem
 
 Every commit triggers your full test suite:
@@ -37,6 +57,7 @@ The Kubiya agent:
 3. Runs only the relevant tests
 4. Skips everything else
 5. Reports how much time/tests you saved
+6. **Stores mappings in cognitive memory** for faster future runs
 
 ---
 
@@ -44,9 +65,9 @@ The Kubiya agent:
 
 ### Prerequisites
 
-- **Node.js 20+**
+- **Node.js 20+** - [Download](https://nodejs.org/)
 - **Kubiya CLI** - [Installation guide](https://docs.kubiya.ai/cli)
-- **Kubiya API Key** - [Get yours here](https://app.kubiya.ai)
+- **Kubiya API Key** - [Get yours here](https://app.kubiya.ai/settings#apiKeys)
 
 ### Step 1: Clone and Install
 
@@ -59,10 +80,34 @@ npm install
 ### Step 2: Set Your API Key
 
 ```bash
-export KUBIYA_API_KEY="your-api-key-here"
+# Copy the example .env file in the parent directory
+cp ../.env.example ../.env
+
+# Edit ../.env with your credentials:
+# KUBIYA_API_KEY=your-api-key-here
+# KUBIYA_AGENT_UUID=your-agent-uuid (optional, for direct execution)
+
+# Source the .env file
+source ../.env
+
+# Verify it's set
+echo $KUBIYA_API_KEY
 ```
 
-### Step 3: See the Problem
+### Step 3: Install Kubiya CLI (if not already installed)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kubiyabot/cli/main/install.sh | bash
+
+# Add to PATH
+export PATH="$HOME/.kubiya/bin:$PATH"
+
+# Verify
+kubiya --version
+kubiya auth status
+```
+
+### Step 4: See the Problem
 
 Run all tests:
 
@@ -75,22 +120,25 @@ npm run test:all
 ```
  PASS  src/tasks/tasks.test.js
  PASS  src/projects/projects.test.js
+ PASS  src/comments/comments.test.js
+ PASS  src/tags/tags.test.js
+ PASS  src/search/search.test.js
 
-Test Suites: 2 passed, 2 total
-Tests:       30 passed, 30 total
+Test Suites: 5 passed, 5 total
+Tests:       54 passed, 54 total
 Time:        2.847s
 ```
 
 54 tests run. Every single time. Even for a one-line change.
 
-### Step 4: Simulate a Code Change
+### Step 5: Simulate a Code Change
 
 ```bash
 # Add a comment to tasks.js (simulating a bug fix)
 echo "// Bug fix for task validation" >> src/tasks/tasks.js
 ```
 
-### Step 5: See the Solution
+### Step 6: See the Solution
 
 Now let Kubiya be smart about it:
 
@@ -101,6 +149,9 @@ kubiya exec "
   Use this mapping:
   - src/tasks/* changes → run: npm run test:tasks
   - src/projects/* changes → run: npm run test:projects
+  - src/comments/* changes → run: npm run test:comments
+  - src/tags/* changes → run: npm run test:tags
+  - src/search/* changes → run: npm run test:search
   - package.json changes → run: npm run test:all
   - README changes → skip tests entirely
 
@@ -139,14 +190,36 @@ Time:        0.892s
 
 === Efficiency Report ===
 
-Total tests in project: 30
+Total tests in project: 54
 Tests actually run:     13
-Tests skipped:          17
+Tests skipped:          41
 
-Time saved: ~57%
+Time saved: ~76%
 ```
 
-**You just saved 57% of your test time** by running only what mattered.
+**You just saved 76% of your test time** by running only what mattered.
+
+---
+
+## Using the Makefile (Recommended)
+
+The easiest way to run this example is using the Makefile from the parent directory:
+
+```bash
+cd ..  # Go to agentic_ci_cd_examples root
+
+# See all available commands
+make help
+
+# Run ALL tests
+make test-smart
+
+# Run only tasks module tests
+make test-smart-tasks
+
+# Run with Kubiya agent
+make test-smart-kubiya
+```
 
 ---
 
@@ -184,7 +257,7 @@ smart-test-selection/
 
 ---
 
-## Change → Test Mapping
+## Change to Test Mapping
 
 | What Changed | Test Command | Tests Run | Tests Skipped |
 |--------------|--------------|-----------|---------------|
@@ -211,22 +284,71 @@ smart-test-selection/
 
 ---
 
+## The `kubiya exec` Command
+
+### Basic Syntax
+
+```bash
+kubiya exec "<instruction>" --local --cwd . --yes
+```
+
+### Essential Flags
+
+| Flag | Purpose |
+|------|---------|
+| `"<instruction>"` | Natural language description of what you want |
+| `--local` | Run with ephemeral local worker |
+| `--cwd .` | **CRITICAL:** Set working directory to current folder |
+| `--yes` | Auto-confirm actions (required for CI) |
+
+### Execution Modes
+
+**Planning Mode (Recommended for Local):**
+```bash
+kubiya exec "Check git diff and run only affected tests" --local --cwd . --yes
+```
+- Automatically selects best agent
+- Creates ephemeral worker
+- Works reliably for local testing
+
+**Direct Agent Mode (For CI/CD):**
+```bash
+kubiya exec agent <AGENT_UUID> "run affected tests" --cwd . --yes
+```
+- Bypasses planning phase
+- Faster execution
+- Requires pre-configured agent UUID
+- Best for production CI/CD with remote workers
+
+---
+
 ## CircleCI Integration
 
-The included `.circleci/config.yml` runs Kubiya automatically on every push.
+The included `.circleci/config.yml` runs Kubiya automatically on every push using direct agent execution for faster CI runs.
 
-### Setup
+### Required Environment Variables
 
-1. **Add your API key to CircleCI:**
-   - Go to Project Settings > Environment Variables
-   - Add `KUBIYA_API_KEY` with your key
+Set these in your CircleCI context (e.g., `kubiya-secrets`):
 
-2. **Push your code:**
+| Variable | Description |
+|----------|-------------|
+| `KUBIYA_API_KEY` | Your Kubiya API key |
+| `KUBIYA_AGENT_UUID` | Agent UUID for direct execution |
+| `KUBIYA_NON_INTERACTIVE` | Set to `true` (automatically set in config) |
+
+### Setup Steps
+
+1. **Create a CircleCI context** named `kubiya-secrets`
+2. **Add environment variables** to the context:
+   - `KUBIYA_API_KEY`: Your API key
+   - `KUBIYA_AGENT_UUID`: Your agent UUID
+
+3. **Push your code:**
    ```bash
    git push origin main
    ```
 
-3. **Watch intelligent test selection in action.**
+4. **Watch intelligent test selection in action.**
 
 ### The Pipeline
 
@@ -234,11 +356,17 @@ The included `.circleci/config.yml` runs Kubiya automatically on every push.
 version: 2.1
 
 jobs:
-  smart-test:
+  test-intelligent:
     docker:
       - image: cimg/node:20.11
+    environment:
+      KUBIYA_NON_INTERACTIVE: "true"
     steps:
       - checkout
+
+      - run:
+          name: Fetch git history for diff
+          command: git fetch origin main --depth=2 || true
 
       - run:
           name: Install Kubiya CLI
@@ -248,27 +376,47 @@ jobs:
 
       - run:
           name: Install Dependencies
-          command: npm ci
+          command: npm install
 
       - run:
-          name: Smart Test Selection
+          name: Intelligent Test Selection
           command: |
-            kubiya exec "
-              STEP 1: Run git diff HEAD~1 --name-only to see changes
-              STEP 2: Map changes to test suites:
-                      - src/tasks/* → npm run test:tasks
-                      - src/projects/* → npm run test:projects
-                      - package.json → npm run test:all
-                      - README only → skip tests
-              STEP 3: Execute the appropriate test command
-              STEP 4: Report what ran and what was saved
-            " --local --cwd . --yes
+            kubiya exec agent ${KUBIYA_AGENT_UUID} "
+            You are an intelligent CI/CD agent that runs only relevant tests.
+
+            MODULE STRUCTURE:
+            - src/tasks/ → npm run test:tasks (13 tests)
+            - src/projects/ → npm run test:projects (17 tests)
+            - src/comments/ → npm run test:comments (6 tests)
+            - src/tags/ → npm run test:tags (8 tests)
+            - src/search/ → npm run test:search (10 tests)
+
+            TASK: Analyze changes and run only affected tests
+
+            STEP 1 - Check what changed:
+            Run: git diff HEAD~1 --name-only
+
+            STEP 2 - Map changes to modules and run only affected test commands.
+
+            STEP 3 - Report efficiency (tests run vs total 54).
+            " --cwd . --yes
 
 workflows:
-  test:
+  intelligent-testing:
     jobs:
-      - smart-test:
-          context: kubiya
+      - test-intelligent:
+          context:
+            - kubiya-secrets
+```
+
+### Local Testing Note
+
+**Important:** `circleci local execute` has limitations with environment variable handling. For local testing, use the Makefile targets instead:
+
+```bash
+# Instead of: circleci local execute test-intelligent
+# Use:
+make test-smart-kubiya
 ```
 
 ---
@@ -277,80 +425,80 @@ workflows:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    kubiya exec --local                       │
+│                    kubiya exec --local --cwd .              │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
 │  1. DIFF                                                     │
 │     └── git diff HEAD~1 --name-only                         │
 │         Output: src/tasks/tasks.js                          │
 │                                                              │
-│  2. MAP                                                      │
+│  2. RECALL                                                   │
+│     └── Check cognitive memory for file→test mappings       │
+│                                                              │
+│  3. MAP                                                      │
 │     └── src/tasks/* → tasks module                          │
 │                                                              │
-│  3. SELECT                                                   │
+│  4. SELECT                                                   │
 │     └── Command: npm run test:tasks                         │
 │                                                              │
-│  4. EXECUTE                                                  │
-│     └── Run 13 tests (skip 17)                              │
+│  5. EXECUTE                                                  │
+│     └── Run 13 tests (skip 41)                              │
 │                                                              │
-│  5. REPORT                                                   │
-│     └── 57% time saved                                      │
+│  6. STORE                                                    │
+│     └── Save mapping to cognitive memory                    │
+│                                                              │
+│  7. REPORT                                                   │
+│     └── 76% time saved                                      │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Example Scenarios
+## Cognitive Memory Integration
 
-### Scenario 1: Fix a Task Bug
+Kubiya agents use **Cognitive Memory** to learn and remember across sessions:
 
-```bash
-# Make a change to tasks
-echo "// Fix validation" >> src/tasks/tasks.js
+### How It Benefits This Example
 
-# Kubiya runs only tasks tests
-kubiya exec "Check diff, run only affected tests" --local --cwd . --yes
+1. **File-to-Test Mapping Storage** - Agent learns which files trigger which tests
+2. **Dependency Tracking** - Remembers cross-module dependencies
+3. **Pattern Recognition** - Identifies which changes typically require full test runs
+4. **Team Knowledge Sharing** - Mappings are shared across your organization
+
+### Memory Operations
+
+```python
+# Agent stores file→test mappings
+store_memory(
+    content="src/tasks/* files map to npm run test:tasks (13 tests)",
+    metadata={
+        "category": "test-mapping",
+        "module": "tasks",
+        "test_count": 13,
+        "environment": "ci"
+    }
+)
+
+# Agent recalls mappings on subsequent runs
+recall_memory("test mapping for src/tasks files")
 ```
 
-**Result:** 13 tests run, 17 skipped (57% saved)
+### Semantic Search for Test Mappings
 
-### Scenario 2: Update Documentation
+| Query | What It Finds |
+|-------|---------------|
+| "test mapping for tasks" | npm run test:tasks |
+| "what tests for projects module" | npm run test:projects |
+| "cross-module dependencies" | Files that require full test suite |
 
-```bash
-# Change only README
-echo "## Updated docs" >> README.md
+### Learning from Historical Runs
 
-# Kubiya skips all tests
-kubiya exec "Check diff, run only affected tests" --local --cwd . --yes
-```
-
-**Result:** 0 tests run, 30 skipped (100% saved)
-
-### Scenario 3: Update Dependencies
-
-```bash
-# Install a new package
-npm install lodash
-
-# Kubiya runs all tests (dependencies affect everything)
-kubiya exec "Check diff, run only affected tests" --local --cwd . --yes
-```
-
-**Result:** 30 tests run, 0 skipped (full coverage needed)
-
-### Scenario 4: Change Multiple Modules
-
-```bash
-# Change both modules
-echo "// Update" >> src/tasks/tasks.js
-echo "// Update" >> src/projects/projects.js
-
-# Kubiya runs all tests
-kubiya exec "Check diff, run only affected tests" --local --cwd . --yes
-```
-
-**Result:** 30 tests run, 0 skipped (both modules affected)
+Over time, the agent builds knowledge about:
+- Which file changes tend to break which tests
+- Hidden dependencies not obvious from file structure
+- Optimal test ordering for faster feedback
+- Common patterns that require full test runs
 
 ---
 
@@ -405,12 +553,142 @@ kubiya exec "
 " --local --cwd . --yes
 ```
 
+### Multiple Module Changes
+
+When multiple modules change, run all relevant tests:
+
+```bash
+kubiya exec "
+  Check what changed in this commit.
+
+  For each changed file:
+  - Identify its module
+  - Queue that module's tests
+
+  Run all queued test commands.
+  Report total coverage.
+" --local --cwd . --yes
+```
+
+---
+
+## Example Scenarios
+
+### Scenario 1: Fix a Task Bug
+
+```bash
+# Make a change to tasks
+echo "// Fix validation" >> src/tasks/tasks.js
+
+# Kubiya runs only tasks tests
+kubiya exec "Check diff, run only affected tests" --local --cwd . --yes
+```
+
+**Result:** 13 tests run, 41 skipped (76% saved)
+
+### Scenario 2: Update Documentation
+
+```bash
+# Change only README
+echo "## Updated docs" >> README.md
+
+# Kubiya skips all tests
+kubiya exec "Check diff, run only affected tests" --local --cwd . --yes
+```
+
+**Result:** 0 tests run, 54 skipped (100% saved)
+
+### Scenario 3: Update Dependencies
+
+```bash
+# Install a new package
+npm install lodash
+
+# Kubiya runs all tests (dependencies affect everything)
+kubiya exec "Check diff, run only affected tests" --local --cwd . --yes
+```
+
+**Result:** 54 tests run, 0 skipped (full coverage needed)
+
+### Scenario 4: Change Multiple Modules
+
+```bash
+# Change multiple modules
+echo "// Update" >> src/tasks/tasks.js
+echo "// Update" >> src/projects/projects.js
+
+# Kubiya runs tests for both modules
+kubiya exec "Check diff, run only affected tests" --local --cwd . --yes
+```
+
+**Result:** 30 tests run (tasks + projects), 24 skipped (44% saved)
+
+---
+
+## Troubleshooting
+
+### "Command not found: kubiya"
+
+The CLI isn't in your PATH:
+```bash
+export PATH="$HOME/.kubiya/bin:$PATH"
+
+# Add to ~/.bashrc or ~/.zshrc for persistence
+echo 'export PATH="$HOME/.kubiya/bin:$PATH"' >> ~/.zshrc
+```
+
+### "KUBIYA_API_KEY is not set"
+
+Source your .env file:
+```bash
+source ../.env
+
+# Or export directly
+export KUBIYA_API_KEY="your-api-key-here"
+```
+
+Or use the Makefile (which loads .env automatically):
+```bash
+make test-smart-kubiya
+```
+
+### Agent not finding files
+
+Make sure you're using `--cwd .` flag:
+```bash
+kubiya exec "..." --local --cwd . --yes
+#                          ^^^^^^ Critical!
+```
+
+### "422 error: worker_queue_id required"
+
+This happens with direct agent execution using `--local`. Use planning mode:
+```bash
+# Instead of:
+kubiya exec agent $UUID "..." --local --cwd . --yes
+
+# Use:
+kubiya exec "..." --local --cwd . --yes
+```
+
+### No git diff available
+
+If there's no git history to diff against:
+```bash
+# Ensure you have at least 2 commits
+git log --oneline -5
+
+# Or specify what to test manually
+kubiya exec "Run npm run test:tasks" --local --cwd . --yes
+```
+
 ---
 
 ## Learn More
 
 - **[Kubiya Documentation](https://docs.kubiya.ai/)**
 - **[kubiya exec Reference](https://docs.kubiya.ai/cli/on-demand-execution)**
+- **[Cognitive Memory](https://docs.kubiya.ai/core-concepts/cognitive-memory/overview)**
 - **[Main Examples README](../README.md)**
 
 ---
@@ -420,3 +698,4 @@ kubiya exec "
 1. Try the **[Flaky Test Detection](../fleaky-tests-circleci/)** example
 2. Combine both patterns: smart selection + flaky detection
 3. Add Kubiya to your monorepo for even bigger savings
+4. Leverage cognitive memory to learn optimal test patterns
