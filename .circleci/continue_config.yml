@@ -100,6 +100,14 @@ jobs:
             echo "Using Kubiya planner to analyze and run tests"
             echo ""
 
+            # Debug: Check if API key is set
+            if [ -z "$KUBIYA_API_KEY" ]; then
+              echo "ERROR: KUBIYA_API_KEY is not set!"
+              echo "Make sure the kubiya-secrets context is attached to this job"
+              exit 1
+            fi
+            echo "API key is set (length: ${#KUBIYA_API_KEY})"
+
             kubiya exec "
             Analyze tests for flaky patterns in this Node.js project.
 
