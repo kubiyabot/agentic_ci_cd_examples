@@ -212,3 +212,5 @@ npm run test:stable
 - Try [Smart Test Selection](../smart-test-selection/) to run only affected tests
 - Add Kubiya to your CI pipeline
 - Check the [main README](../README.md) for more examples
+
+<!-- CI validated -->
