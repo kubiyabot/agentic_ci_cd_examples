@@ -213,4 +213,4 @@ npm run test:stable
 - Add Kubiya to your CI pipeline
 - Check the [main README](../README.md) for more examples
 
-<!-- CI validated -->
+<!-- CI validated: Python 3.11 -->
