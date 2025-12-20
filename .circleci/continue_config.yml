@@ -1,0 +1,282 @@
+version: 2.1
+
+# =============================================================================
+# Continuation Config - Conditional Workflow Execution
+# =============================================================================
+#
+# This config is triggered by the setup phase (config.yml) with parameters
+# that determine which workflows to run based on changed files.
+#
+# Workflows:
+# - flaky-test-detection: Runs when fleaky-tests-circleci/ changes
+# - smart-test-selection: Runs when smart-test-selection/ changes
+# =============================================================================
+
+parameters:
+  run-flaky-tests:
+    type: boolean
+    default: false
+  run-smart-selection:
+    type: boolean
+    default: false
+
+# =============================================================================
+# Job Definitions
+# =============================================================================
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Flaky Test Detection Jobs
+  # ---------------------------------------------------------------------------
+
+  test-flaky-baseline:
+    docker:
+      - image: cimg/node:20.11
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-flaky-deps-{{ checksum "fleaky-tests-circleci/package.json" }}
+            - v1-flaky-deps-
+
+      - run:
+          name: Install Dependencies
+          command: cd fleaky-tests-circleci && npm ci
+
+      - save_cache:
+          paths:
+            - fleaky-tests-circleci/node_modules
+          key: v1-flaky-deps-{{ checksum "fleaky-tests-circleci/package.json" }}
+
+      - run:
+          name: Run All Tests (Including Flaky Ones)
+          command: |
+            cd fleaky-tests-circleci
+            echo "=== BASELINE: Running ALL tests ==="
+            echo "This includes flaky tests that may fail randomly"
+            echo ""
+            npm run test:all || true
+            echo ""
+            echo "Note: Some tests likely failed due to flakiness"
+
+      - store_test_results:
+          path: fleaky-tests-circleci/coverage
+
+  test-flaky-kubiya:
+    docker:
+      - image: cimg/node:20.11
+    environment:
+      KUBIYA_NON_INTERACTIVE: "true"
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-flaky-deps-{{ checksum "fleaky-tests-circleci/package.json" }}
+            - v1-flaky-deps-
+
+      - run:
+          name: Install Dependencies
+          command: cd fleaky-tests-circleci && npm ci
+
+      - save_cache:
+          paths:
+            - fleaky-tests-circleci/node_modules
+          key: v1-flaky-deps-{{ checksum "fleaky-tests-circleci/package.json" }}
+
+      - run:
+          name: Install Kubiya CLI
+          command: |
+            curl -fsSL https://raw.githubusercontent.com/kubiyabot/cli/main/install.sh | bash
+            echo 'export PATH="$HOME/.kubiya/bin:$PATH"' >> $BASH_ENV
+
+      - run:
+          name: Intelligent Test Execution
+          command: |
+            cd fleaky-tests-circleci
+
+            echo "=== KUBIYA INTELLIGENT TEST EXECUTION ==="
+            echo "Using direct agent execution (no planning phase)"
+            echo ""
+
+            AGENT_UUID="${KUBIYA_AGENT_UUID}"
+            echo "Agent UUID: ${AGENT_UUID:0:8}..."
+
+            kubiya exec agent "${AGENT_UUID}" "
+            You are an intelligent CI/CD agent analyzing tests for flaky patterns.
+
+            CONTEXT:
+            - Repository: fleaky-tests-circleci
+            - Working directory: $(pwd)
+            - This is a demo repo with intentionally flaky tests
+
+            TASK: Analyze and run tests intelligently
+
+            STEP 1 - Analyze flaky test directory:
+            List files in __tests__/flaky/ and analyze each for flaky patterns:
+            - Math.random() usage (causes random failures)
+            - new Date() or time-based logic (timing dependent)
+            - setTimeout with variable delays (async race conditions)
+
+            STEP 2 - Report findings:
+            For each flaky test found, explain:
+            - File path
+            - Type of flakiness (RANDOM, TIMING, ASYNC)
+            - Why it would fail intermittently
+
+            STEP 3 - Run stable tests only:
+            Execute: npm run test:unit
+            This runs only the stable unit tests, skipping flaky ones.
+
+            STEP 4 - Summary:
+            Report how many tests were run vs skipped and overall results.
+            " --local --cwd . --yes
+
+            echo ""
+            echo "=== Kubiya execution complete ==="
+
+      - store_test_results:
+          path: fleaky-tests-circleci/coverage
+
+  # ---------------------------------------------------------------------------
+  # Smart Test Selection Jobs
+  # ---------------------------------------------------------------------------
+
+  test-smart-baseline:
+    docker:
+      - image: cimg/node:20.11
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-smart-deps-{{ checksum "smart-test-selection/package.json" }}
+            - v1-smart-deps-
+
+      - run:
+          name: Install Dependencies
+          command: cd smart-test-selection && npm install
+
+      - save_cache:
+          paths:
+            - smart-test-selection/node_modules
+          key: v1-smart-deps-{{ checksum "smart-test-selection/package.json" }}
+
+      - run:
+          name: Run ALL Tests (Mechanical Approach)
+          command: |
+            cd smart-test-selection
+            echo "=== MECHANICAL: Running ALL 54 tests ==="
+            echo "This runs every test regardless of what changed"
+            echo ""
+            npm run test:all
+            echo ""
+            echo "All tests completed (but many were unnecessary)"
+
+      - store_test_results:
+          path: smart-test-selection/coverage
+
+  test-smart-kubiya:
+    docker:
+      - image: cimg/node:20.11
+    environment:
+      KUBIYA_NON_INTERACTIVE: "true"
+    steps:
+      - checkout
+
+      - run:
+          name: Fetch git history for diff
+          command: git fetch origin main --depth=2 || true
+
+      - restore_cache:
+          keys:
+            - v1-smart-deps-{{ checksum "smart-test-selection/package.json" }}
+            - v1-smart-deps-
+
+      - run:
+          name: Install Dependencies
+          command: cd smart-test-selection && npm install
+
+      - save_cache:
+          paths:
+            - smart-test-selection/node_modules
+          key: v1-smart-deps-{{ checksum "smart-test-selection/package.json" }}
+
+      - run:
+          name: Install Kubiya CLI
+          command: |
+            curl -fsSL https://raw.githubusercontent.com/kubiyabot/cli/main/install.sh | bash
+            echo 'export PATH="$HOME/.kubiya/bin:$PATH"' >> $BASH_ENV
+
+      - run:
+          name: Intelligent Test Selection
+          command: |
+            cd smart-test-selection
+
+            echo "=== KUBIYA INTELLIGENT TEST SELECTION ==="
+            echo "Using direct agent: ${KUBIYA_AGENT_UUID}"
+            echo ""
+
+            kubiya exec agent ${KUBIYA_AGENT_UUID} "
+            You are an intelligent CI/CD agent that runs only relevant tests.
+
+            CONTEXT:
+            - Repository: smart-test-selection
+            - Working directory: $(pwd)
+            - This is a modular Node.js app with independent modules
+
+            MODULE STRUCTURE:
+            - src/tasks/ → npm run test:tasks (13 tests)
+            - src/projects/ → npm run test:projects (17 tests)
+            - src/comments/ → npm run test:comments (6 tests)
+            - src/tags/ → npm run test:tags (8 tests)
+            - src/search/ → npm run test:search (10 tests)
+
+            TASK: Analyze changes and run only affected tests
+
+            STEP 1 - Check what changed:
+            Run: git diff HEAD~1 --name-only 2>/dev/null || git diff origin/main --name-only 2>/dev/null || echo 'No diff available'
+            If no diff available, run all tests.
+
+            STEP 2 - Map changes to modules and run only affected test commands.
+            - src/tasks/* → npm run test:tasks
+            - src/projects/* → npm run test:projects
+            - package.json → npm run test:all
+            - README.md, docs/* → skip tests
+
+            STEP 3 - Report efficiency (tests run vs total 54).
+            " --local --cwd . --yes
+
+            echo ""
+            echo "=== Kubiya execution complete ==="
+
+      - store_test_results:
+          path: smart-test-selection/coverage
+
+# =============================================================================
+# Conditional Workflows
+# =============================================================================
+
+workflows:
+  # Runs when fleaky-tests-circleci/ changes
+  flaky-test-detection:
+    when: << pipeline.parameters.run-flaky-tests >>
+    jobs:
+      - test-flaky-baseline:
+          name: "Flaky: Baseline (all tests)"
+      - test-flaky-kubiya:
+          name: "Flaky: Kubiya (intelligent)"
+          context:
+            - kubiya-secrets
+
+  # Runs when smart-test-selection/ changes
+  smart-test-selection:
+    when: << pipeline.parameters.run-smart-selection >>
+    jobs:
+      - test-smart-baseline:
+          name: "Smart: Baseline (all 54 tests)"
+      - test-smart-kubiya:
+          name: "Smart: Kubiya (affected only)"
+          context:
+            - kubiya-secrets

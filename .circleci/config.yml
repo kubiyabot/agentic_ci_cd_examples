@@ -1,0 +1,33 @@
+version: 2.1
+setup: true
+
+# =============================================================================
+# Setup Phase - Path Filtering for Conditional Pipeline Triggers
+# =============================================================================
+#
+# This config detects which folders changed and triggers the appropriate
+# workflows in continue_config.yml
+#
+# Prerequisites:
+# 1. Enable "Dynamic config using setup workflows" in Project Settings → Advanced
+# 2. Create 'kubiya-secrets' context with KUBIYA_API_KEY (and optional KUBIYA_AGENT_UUID)
+#
+# Behavior:
+# - Changes in fleaky-tests-circleci/ → runs flaky test workflows
+# - Changes in smart-test-selection/ → runs smart selection workflows
+# - Changes in both → runs both workflows
+# - Changes in root files only → no workflows run
+# =============================================================================
+
+orbs:
+  path-filtering: circleci/path-filtering@1.0.0
+
+workflows:
+  setup:
+    jobs:
+      - path-filtering/filter:
+          base-revision: main
+          config-path: .circleci/continue_config.yml
+          mapping: |
+            fleaky-tests-circleci/.* run-flaky-tests true
+            smart-test-selection/.* run-smart-selection true
