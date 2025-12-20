@@ -211,37 +211,71 @@ kubiya exec team TEAM_ID "PROMPT" --cwd . --yes
 | Flag | Purpose |
 |------|---------|
 | `"<instruction>"` | Natural language description of what you want |
-| `--local` | Run with ephemeral local worker (creates temporary worker) |
+| `--local` | Creates an ephemeral worker queue on your machine (see below) |
 | `--cwd .` | **CRITICAL:** Set working directory for file/git access |
 | `--yes, -y` | Auto-approve plans (required for CI/CD) |
 | `--non-interactive` | Skip all prompts for automation |
 | `--output, -o` | Output format (text/json/yaml) |
 | `--priority` | Task priority (low/medium/high/critical) |
 
+### The `--local` Flag and Ephemeral Queues
+
+The `--local` flag is essential for running Kubiya agents in your local environment or CI/CD pipeline:
+
+```bash
+kubiya exec "run tests" --local --cwd . --yes
+```
+
+**What happens when you use `--local`:**
+
+1. **Ephemeral Worker Queue** - Kubiya creates a temporary worker queue on your machine
+2. **Local Execution** - The agent runs commands directly in your environment
+3. **File Access** - Combined with `--cwd .`, the agent can read/write files in your repository
+4. **Auto-Cleanup** - The ephemeral queue is automatically destroyed after execution completes
+
+**Why ephemeral queues matter:**
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     WITHOUT --local                                  │
+│  Your Machine → Kubiya Cloud → Remote Worker → Results              │
+│  (No access to your local files)                                    │
+├─────────────────────────────────────────────────────────────────────┤
+│                     WITH --local                                     │
+│  Your Machine → Kubiya Cloud → Ephemeral Local Worker → Results     │
+│  (Full access to your local files via --cwd)                        │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Use cases for `--local`:**
+- Running tests in CI/CD pipelines (CircleCI, GitHub Actions, etc.)
+- Local development and testing
+- Any task requiring access to local files or git repository
+
 ### Execution Modes
 
-**Planning Mode (Recommended for Local):**
+**Planning Mode (Recommended):**
 ```bash
 kubiya exec "analyze tests and run only stable ones" --local --cwd . --yes
 ```
-- Automatically selects best agent/team
+- Automatically selects best agent/team for the task
 - Generates execution plan with cost estimation
-- Creates ephemeral worker for execution
-- Best for local testing and development
+- Creates ephemeral worker queue for local execution
+- Best for most use cases
 
-**Direct Agent Mode (For CI/CD):**
+**Direct Agent Mode:**
 ```bash
 kubiya exec agent $KUBIYA_AGENT_UUID "run tests" --cwd . --yes
 ```
-- Bypasses planning phase
-- Faster execution
+- Bypasses planning phase for faster execution
 - Requires pre-configured agent UUID
-- Best for production CI/CD pipelines
+- Uses remote workers (not ephemeral local queue)
+- Best for production CI/CD with dedicated workers
 
 ### Important Notes
 
 1. **Always use `--cwd .`** - This flag is critical for the agent to access files in your repository
-2. **Planning mode for local** - Use `kubiya exec "prompt"` with `--local` for local testing
+2. **Combine `--local` with `--cwd`** - For local file access, you need both flags
 3. **Export API key** - Ensure `KUBIYA_API_KEY` is exported: `export KUBIYA_API_KEY="your-key"`
 
 ---

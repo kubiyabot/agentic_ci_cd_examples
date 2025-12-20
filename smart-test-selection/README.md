@@ -297,28 +297,51 @@ kubiya exec "<instruction>" --local --cwd . --yes
 | Flag | Purpose |
 |------|---------|
 | `"<instruction>"` | Natural language description of what you want |
-| `--local` | Run with ephemeral local worker |
+| `--local` | Creates an ephemeral worker queue on your machine |
 | `--cwd .` | **CRITICAL:** Set working directory to current folder |
 | `--yes` | Auto-confirm actions (required for CI) |
 
+### The `--local` Flag and Ephemeral Queues
+
+The `--local` flag creates a temporary worker queue directly on your machine:
+
+```bash
+kubiya exec "Check git diff" --local --cwd . --yes
+```
+
+**What happens:**
+1. **Ephemeral Queue Created** - A temporary worker queue spins up locally
+2. **Agent Executes Locally** - Commands run in your environment with access to local files
+3. **Auto-Cleanup** - Queue is destroyed after execution completes
+
+**Why this matters for smart test selection:**
+```
+Without --local: Agent can't access your git repository or run local tests
+With --local:    Agent runs git diff, reads files, and executes npm commands locally
+```
+
+This is essential for:
+- Running `git diff` to detect changed files
+- Executing test commands (`npm run test:tasks`, etc.)
+- Reading source files to understand code structure
+
 ### Execution Modes
 
-**Planning Mode (Recommended for Local):**
+**Planning Mode (Recommended):**
 ```bash
 kubiya exec "Check git diff and run only affected tests" --local --cwd . --yes
 ```
-- Automatically selects best agent
-- Creates ephemeral worker
-- Works reliably for local testing
+- Automatically selects best agent for the task
+- Creates ephemeral worker queue for local execution
+- Works reliably for local testing and CI/CD
 
-**Direct Agent Mode (For CI/CD):**
+**Direct Agent Mode:**
 ```bash
 kubiya exec agent <AGENT_UUID> "run affected tests" --cwd . --yes
 ```
-- Bypasses planning phase
-- Faster execution
-- Requires pre-configured agent UUID
-- Best for production CI/CD with remote workers
+- Bypasses planning phase for faster execution
+- Uses remote workers (requires dedicated worker setup)
+- Best for production CI/CD with pre-configured infrastructure
 
 ---
 

@@ -295,28 +295,51 @@ kubiya exec "<instruction>" --local --cwd . --yes
 | Flag | Purpose |
 |------|---------|
 | `"<instruction>"` | Natural language description of what you want |
-| `--local` | Run with ephemeral local worker |
+| `--local` | Creates an ephemeral worker queue on your machine |
 | `--cwd .` | **CRITICAL:** Set working directory to current folder |
 | `--yes` | Auto-confirm actions (required for CI) |
 
+### The `--local` Flag and Ephemeral Queues
+
+The `--local` flag creates a temporary worker queue directly on your machine:
+
+```bash
+kubiya exec "Analyze tests" --local --cwd . --yes
+```
+
+**What happens:**
+1. **Ephemeral Queue Created** - A temporary worker queue spins up locally
+2. **Agent Executes Locally** - Commands run in your environment with access to local files
+3. **Auto-Cleanup** - Queue is destroyed after execution completes
+
+**Why this matters for CI/CD:**
+```
+Without --local: Agent runs on remote worker (no access to your repo files)
+With --local:    Agent runs locally via ephemeral queue (full file access)
+```
+
+This is essential for:
+- Running tests that need access to your codebase
+- Executing git commands on your repository
+- Any task requiring local file system access
+
 ### Execution Modes
 
-**Planning Mode (Recommended for Local):**
+**Planning Mode (Recommended):**
 ```bash
 kubiya exec "Analyze tests for flaky patterns" --local --cwd . --yes
 ```
-- Automatically selects best agent
-- Creates ephemeral worker
-- Works reliably for local testing
+- Automatically selects best agent for the task
+- Creates ephemeral worker queue for local execution
+- Works reliably for local testing and CI/CD
 
-**Direct Agent Mode (For CI/CD):**
+**Direct Agent Mode:**
 ```bash
 kubiya exec agent <AGENT_UUID> "run stable tests" --cwd . --yes
 ```
-- Bypasses planning phase
-- Faster execution
-- Requires pre-configured agent UUID
-- Best for production CI/CD with remote workers
+- Bypasses planning phase for faster execution
+- Uses remote workers (requires dedicated worker setup)
+- Best for production CI/CD with pre-configured infrastructure
 
 ---
 
