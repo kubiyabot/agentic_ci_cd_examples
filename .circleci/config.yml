@@ -20,12 +20,19 @@ setup: true
 # =============================================================================
 
 orbs:
-  path-filtering: circleci/path-filtering@1.0.0
+  path-filtering: circleci/path-filtering@3.0.0
+
+# Custom executor with Python 3.11 (default cimg/base has Python 3.8 which is too old)
+executors:
+  python311:
+    docker:
+      - image: cimg/python:3.11
 
 workflows:
   setup:
     jobs:
       - path-filtering/filter:
+          executor: python311
           base-revision: main
           config-path: .circleci/continue_config.yml
           mapping: |
