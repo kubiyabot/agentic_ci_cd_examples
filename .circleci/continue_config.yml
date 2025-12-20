@@ -65,7 +65,7 @@ jobs:
 
   test-flaky-kubiya:
     docker:
-      - image: cimg/node:20.11
+      - image: cimg/python:3.11-node
     environment:
       KUBIYA_NON_INTERACTIVE: "true"
     steps:
@@ -179,7 +179,7 @@ jobs:
 
   test-smart-kubiya:
     docker:
-      - image: cimg/node:20.11
+      - image: cimg/python:3.11-node
     environment:
       KUBIYA_NON_INTERACTIVE: "true"
     steps:
