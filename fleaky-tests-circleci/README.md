@@ -213,4 +213,4 @@ npm run test:stable
 - Add Kubiya to your CI pipeline
 - Check the [main README](../README.md) for more examples
 
-<!-- CI validated: API key re-stored -->
+<!-- CI validated: secret from UI -->
