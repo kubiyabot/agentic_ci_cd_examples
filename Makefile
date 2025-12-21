@@ -46,7 +46,7 @@ NC := \033[0m # No Color
         test-crossrepo test-crossrepo-kubiya \
         circleci-flaky circleci-flaky-kubiya \
         circleci-smart circleci-smart-kubiya \
-        demo clean
+        demo clean generate-usecase
 
 # Default target
 help:
@@ -93,6 +93,7 @@ help:
 	@echo "$(BLUE)Utilities:$(NC)"
 	@echo "  make demo               Run full demo (all examples)"
 	@echo "  make clean              Clean up node_modules and coverage"
+	@echo "  make generate-usecase   Generate a new use case with Kubiya"
 	@echo ""
 	@echo "$(YELLOW)Note: Kubiya targets require KUBIYA_API_KEY in .env$(NC)"
 	@echo ""
@@ -403,3 +404,19 @@ clean:
 	@rm -rf $(INCIDENT_DIR)/.kubiya $(ARTIFACT_DIR)/.kubiya
 	@rm -rf $(PERF_DIR)/.kubiya $(CROSSREPO_DIR)/.kubiya
 	@echo "$(GREEN)Clean complete$(NC)"
+
+# =============================================================================
+# Use Case Generator
+# =============================================================================
+
+generate-usecase: check-kubiya
+	@if [ -z "$(DESC)" ]; then \
+		echo "$(YELLOW)Usage:$(NC)"; \
+		echo "  make generate-usecase DESC=\"Description of the use case\""; \
+		echo ""; \
+		echo "$(YELLOW)Examples:$(NC)"; \
+		echo "  make generate-usecase DESC=\"Detect security vulnerabilities in npm dependencies\""; \
+		echo "  make generate-usecase DESC=\"Track Docker image sizes across builds\""; \
+		exit 1; \
+	fi
+	@./generate_usecase.sh "$(DESC)"
