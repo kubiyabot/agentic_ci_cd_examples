@@ -1,0 +1,318 @@
+version: 2.1
+
+orbs:
+  node: circleci/node@5.1.0
+
+# ============================================================
+# INCIDENT LEARNING PIPELINE
+# Demonstrates Kubiya Cognitive Memory for failure learning
+# ============================================================
+
+# Environment variables for memory datasets (set in CircleCI context or project settings)
+# KUBIYA_DATASET_FAILURES - Dataset for failure learnings (default: "default")
+# KUBIYA_DATASET_BUILD_HISTORY - Dataset for build history (default: "default")
+# KUBIYA_DATASET_TEST_PATTERNS - Dataset for test patterns (default: "default")
+
+executors:
+  node-executor:
+    docker:
+      - image: cimg/node:20.11
+    working_directory: ~/project
+    environment:
+      KUBIYA_DATASET_FAILURES: ${KUBIYA_DATASET_FAILURES:-default}
+      KUBIYA_DATASET_BUILD_HISTORY: ${KUBIYA_DATASET_BUILD_HISTORY:-default}
+      KUBIYA_DATASET_TEST_PATTERNS: ${KUBIYA_DATASET_TEST_PATTERNS:-default}
+
+commands:
+  install-kubiya-cli:
+    description: Install Kubiya CLI
+    steps:
+      - run:
+          name: Install Kubiya CLI
+          command: |
+            curl -fsSL https://raw.githubusercontent.com/kubiyabot/cli/main/install.sh | bash
+            echo 'export PATH="$HOME/.kubiya/bin:$PATH"' >> $BASH_ENV
+            source $BASH_ENV
+
+  recall-failure-context:
+    description: Recall previous failure learnings from memory
+    steps:
+      - run:
+          name: Recall Previous Failure Learnings
+          command: |
+            echo "=== Recalling Failure Learnings from Organizational Memory ==="
+
+            # Recall known failures for this repository
+            FAILURE_CONTEXT=$(kubiya memory recall "failures in ${CIRCLE_PROJECT_REPONAME}" \
+              --top-k 10 --output json 2>/dev/null || echo "{}")
+
+            # Recall known workarounds
+            WORKAROUND_CONTEXT=$(kubiya memory recall "workarounds for integration test failures" \
+              --top-k 5 --output json 2>/dev/null || echo "{}")
+
+            # Save to environment for next steps
+            echo "export FAILURE_CONTEXT='$FAILURE_CONTEXT'" >> $BASH_ENV
+            echo "export WORKAROUND_CONTEXT='$WORKAROUND_CONTEXT'" >> $BASH_ENV
+
+            echo "Recalled failure context and workarounds from memory"
+
+  store-failure-learning:
+    description: Analyze and store failure learnings
+    parameters:
+      test_type:
+        type: string
+        default: "unit"
+    steps:
+      - run:
+          name: Analyze and Store Failure Learning
+          when: on_fail
+          command: |
+            echo "=== Analyzing Failure and Storing to Memory ==="
+
+            # Use environment variable with default fallback
+            DATASET_FAILURES="${KUBIYA_DATASET_FAILURES:-default}"
+
+            kubiya exec "
+              You are a CI failure analyst. A test failure just occurred.
+
+              TASK: Analyze and document this failure
+
+              1. Read the test output and identify:
+                 - Which test(s) failed
+                 - The error message
+                 - The likely root cause
+
+              2. Categorize the failure:
+                 - INFRASTRUCTURE: Database/Redis/API connectivity
+                 - TIMEOUT: Slow response or async issues
+                 - FLAKY: Random/timing dependent
+                 - CODE: Actual bug in the code
+                 - CONFIGURATION: Environment or config issues
+
+              3. Store your analysis using store_memory:
+                 store_memory({
+                   dataset: '${DATASET_FAILURES}',
+                   content: 'Detailed failure analysis for ${CIRCLE_PROJECT_REPONAME}',
+                   metadata: {
+                     repository: '${CIRCLE_PROJECT_REPONAME}',
+                     branch: '${CIRCLE_BRANCH}',
+                     build_num: '${CIRCLE_BUILD_NUM}',
+                     test_type: '<< parameters.test_type >>',
+                     failure_type: '[INFRASTRUCTURE|TIMEOUT|FLAKY|CODE|CONFIGURATION]',
+                     root_cause: '[Your analysis]',
+                     workaround: '[Immediate fix suggestion]',
+                     permanent_fix: '[Long-term solution]',
+                     timestamp: '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
+                   }
+                 })
+
+              Be specific and actionable in your analysis.
+            " --local --cwd . --yes
+
+jobs:
+  # ============================================================
+  # BASELINE: Standard test run without intelligence
+  # ============================================================
+  test-baseline:
+    executor: node-executor
+    steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: npm
+      - run:
+          name: Run All Tests (Baseline)
+          command: npm test
+      - store_test_results:
+          path: coverage
+
+  # ============================================================
+  # INTELLIGENT: Test run with memory-driven learning
+  # ============================================================
+  test-with-learning:
+    executor: node-executor
+    steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: npm
+      - install-kubiya-cli
+
+      # Phase 1: Recall previous learnings
+      - recall-failure-context
+
+      # Phase 2: Pre-execution intelligence
+      - run:
+          name: Apply Learned Workarounds
+          command: |
+            echo "=== Applying Organizational Learnings ==="
+
+            kubiya exec "
+              PREVIOUS FAILURE LEARNINGS:
+              $FAILURE_CONTEXT
+
+              KNOWN WORKAROUNDS:
+              $WORKAROUND_CONTEXT
+
+              TASK: Prepare for test execution
+
+              1. Analyze the recalled learnings
+              2. Identify if any known issues apply to this run
+              3. If there are applicable workarounds:
+                 - Adjust test timeouts if timeout issues were seen
+                 - Skip known flaky tests
+                 - Apply configuration fixes
+              4. Report what adjustments were made
+
+              DO NOT actually run tests - just prepare the environment.
+            " --local --cwd . --yes
+
+      # Phase 3: Run unit tests
+      - run:
+          name: Run Unit Tests
+          command: npm run test:unit -- --json --outputFile=unit-results.json
+      - store-failure-learning:
+          test_type: "unit"
+
+      # Phase 4: Run integration tests
+      - run:
+          name: Run Integration Tests
+          command: npm run test:integration -- --json --outputFile=integration-results.json
+      - store-failure-learning:
+          test_type: "integration"
+
+      # Phase 5: Success learning
+      - run:
+          name: Store Success Insights
+          when: on_success
+          command: |
+            # Use environment variable with default fallback
+            DATASET_BUILD_HISTORY="${KUBIYA_DATASET_BUILD_HISTORY:-default}"
+
+            kubiya exec "
+              The test run succeeded.
+
+              TASK: Document successful patterns
+
+              1. If previous runs had failures that are now passing:
+                 - Document what fixed the issue
+                 - Store the resolution for future reference
+
+              2. Store a success record:
+                 store_memory({
+                   dataset: '${DATASET_BUILD_HISTORY}',
+                   content: 'Successful build for ${CIRCLE_PROJECT_REPONAME}',
+                   metadata: {
+                     repository: '${CIRCLE_PROJECT_REPONAME}',
+                     branch: '${CIRCLE_BRANCH}',
+                     build_num: '${CIRCLE_BUILD_NUM}',
+                     status: 'success',
+                     timestamp: '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
+                   }
+                 })
+            " --local --cwd . --yes
+
+      - store_test_results:
+          path: coverage
+      - store_artifacts:
+          path: unit-results.json
+      - store_artifacts:
+          path: integration-results.json
+
+  # ============================================================
+  # FULL LEARNING LOOP: Autonomous agent with memory
+  # ============================================================
+  autonomous-learning-pipeline:
+    executor: node-executor
+    steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: npm
+      - install-kubiya-cli
+
+      - run:
+          name: Execute Autonomous Learning Pipeline
+          command: |
+            # Use environment variables with default fallbacks
+            DATASET_FAILURES="${KUBIYA_DATASET_FAILURES:-default}"
+            DATASET_TEST_PATTERNS="${KUBIYA_DATASET_TEST_PATTERNS:-default}"
+
+            kubiya exec "
+              You are an intelligent CI agent with organizational memory.
+
+              === PHASE 1: RECALL ORGANIZATIONAL KNOWLEDGE ===
+              Before running tests, check what the organization knows:
+
+              recall_memory('test failures in ${CIRCLE_PROJECT_REPONAME}')
+              recall_memory('infrastructure issues affecting integration tests')
+              recall_memory('successful workarounds for timeout errors')
+
+              === PHASE 2: ANALYZE AND PREPARE ===
+              Based on recalled knowledge:
+              1. Identify tests that have historically failed
+              2. Check if any infrastructure patterns apply
+              3. Prepare appropriate configurations
+
+              === PHASE 3: EXECUTE TESTS ===
+              Run: npm test -- --json --outputFile=test-results.json
+
+              === PHASE 4: ANALYZE RESULTS ===
+              Read test-results.json and analyze:
+              - Which tests passed/failed
+              - Duration of each test
+              - Any patterns in failures
+
+              === PHASE 5: LEARN AND STORE ===
+              For any NEW insights discovered:
+
+              If failures occurred:
+              store_memory({
+                dataset: '${DATASET_FAILURES}',
+                content: 'Failure analysis: [details]',
+                metadata: {
+                  repository: '${CIRCLE_PROJECT_REPONAME}',
+                  test_file: '[failing test file]',
+                  failure_type: '[category]',
+                  root_cause: '[analysis]',
+                  severity: 'high|medium|low'
+                }
+              })
+
+              If new patterns found:
+              store_memory({
+                dataset: '${DATASET_TEST_PATTERNS}',
+                content: 'Pattern discovered: [description]',
+                metadata: {
+                  pattern_type: 'flaky|slow|infrastructure',
+                  affected_tests: ['list of tests'],
+                  recommendation: '[what to do]'
+                }
+              })
+
+              === PHASE 6: REPORT ===
+              Summarize:
+              - Tests executed and results
+              - Learnings applied from memory
+              - New insights stored for future runs
+            " --local --cwd . --yes
+
+      - store_test_results:
+          path: coverage
+
+workflows:
+  version: 2
+
+  # Baseline workflow - no intelligence
+  baseline:
+    jobs:
+      - test-baseline
+
+  # Learning workflow - with memory integration
+  intelligent-pipeline:
+    jobs:
+      - test-with-learning:
+          context: kubiya-secrets
+
+  # Fully autonomous learning
+  autonomous:
+    jobs:
+      - autonomous-learning-pipeline:
+          context: kubiya-secrets

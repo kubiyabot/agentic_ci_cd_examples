@@ -12,10 +12,14 @@ No config files. No complex setup. Just tell Kubiya what you want.
 
 ## What's Inside
 
-| Example | Problem It Solves | Time Saved |
-|---------|-------------------|------------|
+| Example | Problem It Solves | Key Benefit |
+|---------|-------------------|-------------|
 | [Flaky Test Detection](./fleaky-tests-circleci/) | Tests randomly fail, blocking PRs | 100% reliable CI |
 | [Smart Test Selection](./smart-test-selection/) | Running all 54 tests for a 1-line change | 70-85% fewer tests |
+| [Incident Learning Pipeline](./incident-learning-pipeline/) | Same failures repeat across teams | Learn once, apply forever |
+| [Build Artifact Analyzer](./build-artifact-analyzer/) | Build data lost after each run | Trend analysis & alerts |
+| [Performance Regression Detector](./performance-regression-detector/) | Slow degradation goes unnoticed | Catch regressions early |
+| [Cross-Repo Knowledge Share](./cross-repo-knowledge-share/) | Each repo starts from zero knowledge | Org-wide intelligence |
 
 ---
 
@@ -97,6 +101,22 @@ make test-smart            # Run all 54 tests
 make test-smart-tasks      # Run only tasks module (13 tests)
 make test-smart-kubiya     # Let Kubiya run only affected tests
 
+# Incident Learning Pipeline
+make test-incident         # Run tests (may fail randomly)
+make test-incident-kubiya  # Run with Kubiya learning from failures
+
+# Build Artifact Analyzer
+make test-artifact         # Run tests with coverage
+make test-artifact-kubiya  # Run with Kubiya analysis and ingestion
+
+# Performance Regression Detector
+make test-perf             # Run benchmarks
+make test-perf-kubiya      # Run with baseline comparison
+
+# Cross-Repo Knowledge Share
+make test-crossrepo        # Run pattern detection tests
+make test-crossrepo-kubiya # Run with org knowledge sharing
+
 # Other
 make demo                  # Run everything
 make clean                 # Clean up
@@ -133,6 +153,66 @@ The agent:
 3. Runs only the relevant tests
 
 **Result:** Change one file, run one test suite instead of all 54 tests.
+
+### Incident Learning Pipeline
+
+```bash
+cd incident-learning-pipeline
+kubiya exec "Run tests and learn from any failures" --local --cwd . --yes
+```
+
+The agent:
+1. Recalls previous failure learnings from memory
+2. Runs tests with known workarounds applied
+3. If new failures occur, analyzes root cause
+4. Stores learnings for future runs
+
+**Result:** Same failures never surprise you twice.
+
+### Build Artifact Analyzer
+
+```bash
+cd build-artifact-analyzer
+kubiya exec "Analyze build results and compare to baseline" --local --cwd . --yes
+```
+
+The agent:
+1. Runs tests and generates coverage/timing data
+2. Recalls historical build metrics from memory
+3. Compares current run to baseline
+4. Stores results and alerts on regressions
+
+**Result:** Track build health over time with trend analysis.
+
+### Performance Regression Detector
+
+```bash
+cd performance-regression-detector
+kubiya exec "Run benchmarks and check for regressions" --local --cwd . --yes
+```
+
+The agent:
+1. Recalls performance baselines from memory
+2. Runs benchmark suite
+3. Compares each benchmark to baseline (>50% slower = regression)
+4. Stores results and alerts on significant changes
+
+**Result:** Catch performance regressions before they reach production.
+
+### Cross-Repo Knowledge Share
+
+```bash
+cd cross-repo-knowledge-share
+kubiya exec "Apply org patterns and contribute learnings" --local --cwd . --yes
+```
+
+The agent:
+1. Recalls org-wide patterns (test configs, CI patterns, flaky patterns)
+2. Applies relevant patterns to this repository
+3. Detects new patterns worth sharing
+4. Contributes valuable learnings back to org memory
+
+**Result:** Every repository benefits from organizational intelligence.
 
 ---
 

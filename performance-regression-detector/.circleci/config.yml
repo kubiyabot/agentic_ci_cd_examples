@@ -1,0 +1,354 @@
+version: 2.1
+
+orbs:
+  node: circleci/node@5.1.0
+
+# ============================================================
+# PERFORMANCE REGRESSION DETECTOR
+# Demonstrates Kubiya Cognitive Memory for baseline tracking
+# and automatic regression detection
+# ============================================================
+
+# Environment variables for memory datasets (set in CircleCI context or project settings)
+# KUBIYA_DATASET_BASELINES - Dataset for performance baselines (default: "default")
+# KUBIYA_DATASET_BENCHMARK_RUNS - Dataset for benchmark runs (default: "default")
+# KUBIYA_DATASET_ALERTS - Dataset for performance alerts (default: "default")
+# KUBIYA_DATASET_TRENDS - Dataset for performance trends (default: "default")
+
+executors:
+  node-executor:
+    docker:
+      - image: cimg/node:20.11
+    working_directory: ~/project
+    resource_class: medium
+    environment:
+      KUBIYA_DATASET_BASELINES: ${KUBIYA_DATASET_BASELINES:-default}
+      KUBIYA_DATASET_BENCHMARK_RUNS: ${KUBIYA_DATASET_BENCHMARK_RUNS:-default}
+      KUBIYA_DATASET_ALERTS: ${KUBIYA_DATASET_ALERTS:-default}
+      KUBIYA_DATASET_TRENDS: ${KUBIYA_DATASET_TRENDS:-default}
+
+commands:
+  install-kubiya-cli:
+    description: Install Kubiya CLI
+    steps:
+      - run:
+          name: Install Kubiya CLI
+          command: |
+            curl -fsSL https://raw.githubusercontent.com/kubiyabot/cli/main/install.sh | bash
+            echo 'export PATH="$HOME/.kubiya/bin:$PATH"' >> $BASH_ENV
+            source $BASH_ENV
+
+  recall-performance-baselines:
+    description: Recall performance baselines from memory
+    steps:
+      - run:
+          name: Recall Performance Baselines
+          command: |
+            echo "=== Recalling Performance Baselines ==="
+
+            # Recall baselines for this repository
+            BASELINES=$(kubiya memory recall "performance baselines for ${CIRCLE_PROJECT_REPONAME}" \
+              --top-k 10 --output json 2>/dev/null || echo "[]")
+
+            # Recall any known performance issues
+            PERF_ISSUES=$(kubiya memory recall "performance issues in ${CIRCLE_PROJECT_REPONAME}" \
+              --top-k 5 --output json 2>/dev/null || echo "[]")
+
+            echo "export BASELINES='$BASELINES'" >> $BASH_ENV
+            echo "export PERF_ISSUES='$PERF_ISSUES'" >> $BASH_ENV
+
+            echo "Recalled baselines and known issues"
+
+  store-performance-baseline:
+    description: Store current performance as baseline
+    steps:
+      - run:
+          name: Store Performance Baseline
+          command: |
+            # Use environment variable with default fallback
+            DATASET_BASELINES="${KUBIYA_DATASET_BASELINES:-default}"
+
+            kubiya exec "
+              You are a performance baseline manager.
+
+              TASK: Update performance baselines
+
+              1. Read benchmark-results.json
+              2. Compare to historical baselines:
+                 $BASELINES
+
+              3. If this run is representative (low variance, no anomalies):
+                 Store as new baseline:
+                 store_memory({
+                   dataset: '${DATASET_BASELINES}',
+                   content: 'Performance baseline for ${CIRCLE_PROJECT_REPONAME}',
+                   metadata: {
+                     repository: '${CIRCLE_PROJECT_REPONAME}',
+                     branch: '${CIRCLE_BRANCH}',
+                     commit: '${CIRCLE_SHA1}',
+                     buildNum: '${CIRCLE_BUILD_NUM}',
+                     benchmarks: {
+                       // Include mean, p95, stdDev for each benchmark
+                     },
+                     timestamp: '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
+                   }
+                 })
+
+              4. Note: Only store if this is a stable, representative run
+            " --local --cwd . --yes
+
+jobs:
+  # ============================================================
+  # BASELINE: Run benchmarks without comparison
+  # ============================================================
+  benchmark-baseline:
+    executor: node-executor
+    steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: npm
+      - run:
+          name: Run Benchmarks
+          command: npm run benchmark:json
+      - store_artifacts:
+          path: benchmark-results.json
+
+  # ============================================================
+  # INTELLIGENT: Run benchmarks with regression detection
+  # ============================================================
+  benchmark-with-detection:
+    executor: node-executor
+    steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: npm
+      - install-kubiya-cli
+
+      # Phase 1: Recall baselines
+      - recall-performance-baselines
+
+      # Phase 2: Run benchmarks
+      - run:
+          name: Run Benchmarks
+          command: npm run benchmark:json
+
+      # Phase 3: Compare and detect regressions
+      - run:
+          name: Detect Performance Regressions
+          command: |
+            kubiya exec "
+              HISTORICAL BASELINES:
+              $BASELINES
+
+              KNOWN PERFORMANCE ISSUES:
+              $PERF_ISSUES
+
+              TASK: Analyze benchmark results for regressions
+
+              1. Read benchmark-results.json
+
+              2. For each benchmark, compare to baseline:
+                 - Calculate ratio: current_mean / baseline_mean
+                 - If ratio > 1.5: REGRESSION (50% slower)
+                 - If ratio > 2.0: CRITICAL REGRESSION
+                 - If ratio < 0.8: IMPROVEMENT (20% faster)
+
+              3. Check for known issues:
+                 - Are any regressions matching known issues?
+                 - Any new patterns not seen before?
+
+              4. Report findings:
+                 For each regression:
+                 - Benchmark name
+                 - Current value vs baseline
+                 - Percentage change
+                 - Severity (warning/critical)
+
+              5. If CRITICAL regressions found, fail the build
+            " --local --cwd . --yes
+
+      # Phase 4: Store results
+      - run:
+          name: Store Benchmark Results
+          command: |
+            # Use environment variables with default fallbacks
+            DATASET_BENCHMARK_RUNS="${KUBIYA_DATASET_BENCHMARK_RUNS:-default}"
+            DATASET_ALERTS="${KUBIYA_DATASET_ALERTS:-default}"
+
+            kubiya exec "
+              TASK: Store benchmark results
+
+              1. Read benchmark-results.json
+
+              2. Store the run record:
+                 store_memory({
+                   dataset: '${DATASET_BENCHMARK_RUNS}',
+                   content: 'Benchmark run #${CIRCLE_BUILD_NUM}',
+                   metadata: {
+                     repository: '${CIRCLE_PROJECT_REPONAME}',
+                     branch: '${CIRCLE_BRANCH}',
+                     commit: '${CIRCLE_SHA1}',
+                     buildNum: '${CIRCLE_BUILD_NUM}',
+                     status: 'pass|regression|critical_regression',
+                     regressions: [], // List of regressed benchmarks
+                     improvements: [], // List of improved benchmarks
+                     timestamp: '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
+                   }
+                 })
+
+              3. If regressions detected, create alert:
+                 store_memory({
+                   dataset: '${DATASET_ALERTS}',
+                   content: 'Performance regression in ${CIRCLE_PROJECT_REPONAME}',
+                   metadata: {
+                     alertType: 'PERFORMANCE_REGRESSION',
+                     severity: 'high|critical',
+                     affectedBenchmarks: [],
+                     details: 'Specific changes detected'
+                   }
+                 })
+            " --local --cwd . --yes
+
+      # Phase 5: Update baseline if appropriate
+      - store-performance-baseline
+
+      - store_artifacts:
+          path: benchmark-results.json
+
+  # ============================================================
+  # CLI PATTERN: Direct baseline comparison
+  # ============================================================
+  cli-baseline-comparison:
+    executor: node-executor
+    steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: npm
+      - install-kubiya-cli
+
+      - run:
+          name: CLI Baseline Pattern
+          command: |
+            echo "=== CLI Baseline Comparison Pattern ==="
+
+            # Step 1: Recall baseline via CLI
+            BASELINE=$(kubiya memory recall "performance baseline for ${CIRCLE_PROJECT_REPONAME} main branch" \
+              --top-k 1 --output json 2>/dev/null || echo "{}")
+
+            echo "Baseline: $BASELINE"
+
+            # Step 2: Run benchmarks
+            npm run benchmark:json
+
+            # Step 3: Pass both to agent
+            kubiya exec "
+              PERFORMANCE BASELINE:
+              $BASELINE
+
+              CURRENT RESULTS:
+              $(cat benchmark-results.json)
+
+              TASK:
+              1. Compare each benchmark to baseline
+              2. Flag any >50% regressions
+              3. Report summary with pass/fail status
+              4. If this is a clean run on main, suggest updating baseline
+            " --local --cwd . --yes
+
+  # ============================================================
+  # TREND ANALYSIS: Long-term performance tracking
+  # ============================================================
+  performance-trends:
+    executor: node-executor
+    steps:
+      - checkout
+      - install-kubiya-cli
+
+      - run:
+          name: Analyze Performance Trends
+          command: |
+            # Use environment variables with default fallbacks
+            DATASET_TRENDS="${KUBIYA_DATASET_TRENDS:-default}"
+            DATASET_ALERTS="${KUBIYA_DATASET_ALERTS:-default}"
+
+            kubiya exec "
+              You are a performance trend analyst.
+
+              TASK: Analyze long-term performance trends
+
+              1. Recall historical benchmark data:
+                 recall_memory('benchmark runs for ${CIRCLE_PROJECT_REPONAME}')
+                 recall_memory('performance baselines history')
+
+              2. For each benchmark, analyze trend:
+                 - Is it getting slower over time?
+                 - Is it getting faster?
+                 - Is it stable?
+                 - What's the variance?
+
+              3. Identify concerning patterns:
+                 - Gradual degradation (frog in boiling water)
+                 - Sudden jumps
+                 - Increased variance (instability)
+
+              4. Store trend analysis:
+                 store_memory({
+                   dataset: '${DATASET_TRENDS}',
+                   content: 'Performance trend analysis for ${CIRCLE_PROJECT_REPONAME}',
+                   metadata: {
+                     repository: '${CIRCLE_PROJECT_REPONAME}',
+                     period: 'weekly',
+                     benchmarkTrends: {
+                       // Each benchmark with direction and slope
+                     },
+                     recommendations: [],
+                     timestamp: '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
+                   }
+                 })
+
+              5. Create alerts for concerning trends:
+                 If any benchmark shows consistent degradation:
+                 store_memory({
+                   dataset: '${DATASET_ALERTS}',
+                   content: 'Performance degradation trend detected',
+                   metadata: {
+                     alertType: 'PERFORMANCE_TREND',
+                     severity: 'medium',
+                     benchmark: '[name]',
+                     trend: 'degrading',
+                     details: '[explanation]'
+                   }
+                 })
+            " --local --cwd . --yes
+
+workflows:
+  version: 2
+
+  # Baseline - no comparison
+  baseline:
+    jobs:
+      - benchmark-baseline
+
+  # Full regression detection
+  regression-detection:
+    jobs:
+      - benchmark-with-detection:
+          context: kubiya-secrets
+
+  # CLI pattern demo
+  cli-pattern:
+    jobs:
+      - cli-baseline-comparison:
+          context: kubiya-secrets
+
+  # Weekly trend analysis
+  weekly-trends:
+    triggers:
+      - schedule:
+          cron: "0 0 * * 0"
+          filters:
+            branches:
+              only: main
+    jobs:
+      - performance-trends:
+          context: kubiya-secrets

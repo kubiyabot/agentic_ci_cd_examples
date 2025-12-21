@@ -1,0 +1,38 @@
+{
+  "name": "build-artifact-analyzer",
+  "version": "1.0.0",
+  "description": "Build Artifact Ingestion and Trend Analysis with Kubiya Cognitive Memory",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest",
+    "test:unit": "jest __tests__/unit/",
+    "test:integration": "jest __tests__/integration/",
+    "test:coverage": "jest --coverage",
+    "test:json": "jest --json --outputFile=artifacts/test-results.json",
+    "analyze": "node src/analyzers/index.js",
+    "report": "node src/reporters/index.js",
+    "build": "echo 'Building...' && sleep 1 && echo 'Build complete'",
+    "lint": "eslint src/ __tests__/"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "glob": "^10.3.10",
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.8",
+    "eslint": "^8.53.0",
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 15000,
+    "verbose": true,
+    "collectCoverage": true,
+    "coverageDirectory": "artifacts/coverage",
+    "coverageReporters": ["json", "text", "lcov"],
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ]
+  }
+}

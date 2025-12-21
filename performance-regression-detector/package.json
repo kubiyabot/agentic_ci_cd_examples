@@ -1,0 +1,34 @@
+{
+  "name": "performance-regression-detector",
+  "version": "1.0.0",
+  "description": "Performance Baseline Tracking and Regression Detection with Kubiya Cognitive Memory",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest",
+    "test:unit": "jest __tests__/unit/",
+    "test:integration": "jest __tests__/integration/",
+    "test:json": "jest --json --outputFile=perf-results.json",
+    "benchmark": "node src/benchmarks/run.js",
+    "benchmark:json": "node src/benchmarks/run.js --json > benchmark-results.json",
+    "monitor": "node src/monitors/index.js",
+    "lint": "eslint src/ __tests__/"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "lodash": "^4.17.21",
+    "simple-statistics": "^7.8.3"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.8",
+    "eslint": "^8.53.0",
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 30000,
+    "verbose": true,
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ]
+  }
+}

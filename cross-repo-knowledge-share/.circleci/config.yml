@@ -1,0 +1,391 @@
+version: 2.1
+
+orbs:
+  node: circleci/node@5.1.0
+
+# ============================================================
+# CROSS-REPOSITORY KNOWLEDGE SHARING
+# Demonstrates Kubiya Cognitive Memory for org-wide learning
+# ============================================================
+
+# Environment variables for memory datasets (set in CircleCI context or project settings)
+# KUBIYA_DATASET_ORG_PATTERNS - Dataset for org-wide CI patterns (default: "default")
+# KUBIYA_DATASET_FLAKY_PATTERNS - Dataset for flaky test patterns (default: "default")
+# KUBIYA_DATASET_LEARNING_LOG - Dataset for learning log (default: "default")
+
+executors:
+  node-executor:
+    docker:
+      - image: cimg/node:20.11
+    working_directory: ~/project
+    environment:
+      KUBIYA_DATASET_ORG_PATTERNS: ${KUBIYA_DATASET_ORG_PATTERNS:-default}
+      KUBIYA_DATASET_FLAKY_PATTERNS: ${KUBIYA_DATASET_FLAKY_PATTERNS:-default}
+      KUBIYA_DATASET_LEARNING_LOG: ${KUBIYA_DATASET_LEARNING_LOG:-default}
+
+commands:
+  install-kubiya-cli:
+    description: Install Kubiya CLI
+    steps:
+      - run:
+          name: Install Kubiya CLI
+          command: |
+            curl -fsSL https://raw.githubusercontent.com/kubiyabot/cli/main/install.sh | bash
+            echo 'export PATH="$HOME/.kubiya/bin:$PATH"' >> $BASH_ENV
+            source $BASH_ENV
+
+  recall-org-patterns:
+    description: Recall organization-wide patterns
+    steps:
+      - run:
+          name: Recall Organization Patterns
+          command: |
+            echo "=== Recalling Organization-Wide Patterns ==="
+
+            # Recall patterns applicable to this tech stack
+            ORG_PATTERNS=$(kubiya memory recall "CI patterns for Node.js JavaScript" \
+              --top-k 15 --output json 2>/dev/null || echo "[]")
+
+            # Recall known flaky patterns across org
+            FLAKY_PATTERNS=$(kubiya memory recall "flaky test patterns organization-wide" \
+              --top-k 10 --output json 2>/dev/null || echo "[]")
+
+            # Recall best practices
+            BEST_PRACTICES=$(kubiya memory recall "testing best practices that worked" \
+              --top-k 10 --output json 2>/dev/null || echo "[]")
+
+            echo "export ORG_PATTERNS='$ORG_PATTERNS'" >> $BASH_ENV
+            echo "export FLAKY_PATTERNS='$FLAKY_PATTERNS'" >> $BASH_ENV
+            echo "export BEST_PRACTICES='$BEST_PRACTICES'" >> $BASH_ENV
+
+            echo "Recalled org-wide patterns and best practices"
+
+  contribute-to-org:
+    description: Contribute learnings back to organization
+    steps:
+      - run:
+          name: Contribute Learnings to Organization
+          command: |
+            # Use environment variable with default fallback
+            DATASET_ORG_PATTERNS="${KUBIYA_DATASET_ORG_PATTERNS:-default}"
+
+            kubiya exec "
+              You are a pattern contributor for organizational learning.
+
+              TASK: Analyze this repository and contribute valuable patterns
+
+              1. Read package.json to understand the tech stack
+
+              2. Identify patterns worth sharing:
+                 - Test framework configuration
+                 - CI/CD optimizations
+                 - Quality tooling setup
+                 - Any unique solutions
+
+              3. For each valuable pattern, contribute to org:
+                 store_memory({
+                   dataset: '${DATASET_ORG_PATTERNS}',
+                   content: 'Pattern: [name] discovered in ${CIRCLE_PROJECT_REPONAME}',
+                   metadata: {
+                     patternType: 'TEST_FRAMEWORK|CI_PATTERN|QUALITY_PATTERN',
+                     name: '[pattern name]',
+                     applicableTo: ['node', 'jest', 'javascript'],
+                     effectiveness: 'high|medium|low',
+                     discoveredIn: '${CIRCLE_PROJECT_REPONAME}',
+                     description: '[what it does]',
+                     implementation: '[how to apply it]',
+                     timestamp: '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
+                   }
+                 })
+
+              4. Be selective - only store genuinely useful patterns
+                 that would help other repositories
+            " --local --cwd . --yes
+
+jobs:
+  # ============================================================
+  # LEARN: Apply org knowledge to this repo
+  # ============================================================
+  apply-org-knowledge:
+    executor: node-executor
+    steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: npm
+      - install-kubiya-cli
+
+      # Recall org knowledge
+      - recall-org-patterns
+
+      # Apply learned patterns
+      - run:
+          name: Apply Organization Knowledge
+          command: |
+            kubiya exec "
+              ORGANIZATION PATTERNS:
+              $ORG_PATTERNS
+
+              KNOWN FLAKY PATTERNS:
+              $FLAKY_PATTERNS
+
+              BEST PRACTICES:
+              $BEST_PRACTICES
+
+              TASK: Apply organizational knowledge to this repository
+
+              1. Analyze which org patterns apply:
+                 - Check if any patterns match our tech stack
+                 - Identify applicable best practices
+                 - Note any flaky patterns to watch for
+
+              2. Check our tests for known flaky patterns:
+                 - Read test files in __tests__/
+                 - Compare against org-wide flaky patterns
+                 - Report any matches found
+
+              3. Apply relevant optimizations:
+                 - Configure tests based on best practices
+                 - Skip known flaky patterns
+                 - Apply recommended configurations
+
+              4. Report what was applied:
+                 - List of patterns matched
+                 - Actions taken
+                 - Recommendations for this repo
+            " --local --cwd . --yes
+
+      # Run tests with org knowledge
+      - run:
+          name: Run Tests with Org Knowledge
+          command: npm test
+
+      - store_test_results:
+          path: coverage
+
+  # ============================================================
+  # CONTRIBUTE: Share learnings back to org
+  # ============================================================
+  contribute-learnings:
+    executor: node-executor
+    steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: npm
+      - install-kubiya-cli
+
+      # Run analysis and contribute
+      - run:
+          name: Analyze and Contribute Patterns
+          command: |
+            # Use environment variables with default fallbacks
+            DATASET_ORG_PATTERNS="${KUBIYA_DATASET_ORG_PATTERNS:-default}"
+            DATASET_FLAKY_PATTERNS="${KUBIYA_DATASET_FLAKY_PATTERNS:-default}"
+
+            kubiya exec "
+              You are a pattern analyst contributing to organizational knowledge.
+
+              TASK: Discover and share valuable patterns
+
+              1. Analyze this repository:
+                 - Read package.json
+                 - Check test configuration
+                 - Look at CI setup
+
+              2. Detect patterns:
+                 - Test frameworks and configs
+                 - Quality tools in use
+                 - CI/CD patterns
+
+              3. Check what's already in org knowledge:
+                 recall_memory('patterns from ${CIRCLE_PROJECT_REPONAME}')
+
+              4. For NEW patterns not yet shared:
+                 store_memory({
+                   dataset: '${DATASET_ORG_PATTERNS}',
+                   content: 'Pattern discovered in ${CIRCLE_PROJECT_REPONAME}',
+                   metadata: {
+                     patternType: '[type]',
+                     name: '[name]',
+                     applicableTo: ['technologies'],
+                     effectiveness: 'high|medium|low',
+                     discoveredIn: '${CIRCLE_PROJECT_REPONAME}',
+                     description: '[description]',
+                     implementation: '[how to use]',
+                     confidence: 0.8
+                   }
+                 })
+
+              5. For any FLAKY patterns found:
+                 store_memory({
+                   dataset: '${DATASET_FLAKY_PATTERNS}',
+                   content: 'Flaky pattern in ${CIRCLE_PROJECT_REPONAME}',
+                   metadata: {
+                     patternName: '[name]',
+                     description: '[what makes it flaky]',
+                     fix: '[how to fix]',
+                     severity: 'high|medium|low'
+                   }
+                 })
+
+              Be quality-focused - only share genuinely valuable insights.
+            " --local --cwd . --yes
+
+  # ============================================================
+  # CLI PATTERN: Two-step org learning
+  # ============================================================
+  cli-org-learning:
+    executor: node-executor
+    steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: npm
+      - install-kubiya-cli
+
+      - run:
+          name: CLI Organization Learning Pattern
+          command: |
+            echo "=== CLI Organization Learning Pattern ==="
+
+            # Step 1: Pre-fetch org patterns via CLI
+            ORG_PATTERNS=$(kubiya memory recall "CI patterns for Node.js" \
+              --top-k 10 --output json 2>/dev/null || echo "[]")
+
+            FLAKY_PATTERNS=$(kubiya memory recall "known flaky patterns across org" \
+              --top-k 10 --output json 2>/dev/null || echo "[]")
+
+            # Step 2: Pass to agent for analysis and application
+            kubiya exec "
+              ORGANIZATION PATTERNS (pre-fetched):
+              $ORG_PATTERNS
+
+              KNOWN FLAKY PATTERNS (pre-fetched):
+              $FLAKY_PATTERNS
+
+              TASK:
+              1. Check which org patterns apply to this repository
+              2. Scan tests for known flaky patterns
+              3. Apply relevant configurations
+              4. Report findings
+
+              OUTPUT: Summary of what patterns were applied
+            " --local --cwd . --yes
+
+            # Step 3: Run tests
+            npm test
+
+            # Step 4: Store results via CLI
+            TEST_STATUS=$?
+            DATASET_LEARNING_LOG="${KUBIYA_DATASET_LEARNING_LOG:-default}"
+
+            kubiya memory store \
+              --title "Org learning applied: ${CIRCLE_PROJECT_REPONAME}" \
+              --content "Applied org patterns and ran tests. Status: ${TEST_STATUS}" \
+              --dataset-id "${DATASET_LEARNING_LOG}" \
+              --tags "learning,${CIRCLE_PROJECT_REPONAME}" \
+              2>/dev/null || echo "Store skipped"
+
+  # ============================================================
+  # FULL BIDIRECTIONAL: Learn and contribute
+  # ============================================================
+  bidirectional-learning:
+    executor: node-executor
+    steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: npm
+      - install-kubiya-cli
+
+      - run:
+          name: Bidirectional Organization Learning
+          command: |
+            # Use environment variables with default fallbacks
+            DATASET_ORG_PATTERNS="${KUBIYA_DATASET_ORG_PATTERNS:-default}"
+            DATASET_FLAKY_PATTERNS="${KUBIYA_DATASET_FLAKY_PATTERNS:-default}"
+
+            kubiya exec "
+              You are a bidirectional learning agent.
+
+              === PHASE 1: LEARN FROM ORGANIZATION ===
+
+              Recall what the organization knows:
+              recall_memory('CI patterns for Node.js JavaScript')
+              recall_memory('test optimization strategies that worked')
+              recall_memory('flaky patterns to avoid')
+
+              === PHASE 2: APPLY TO THIS REPO ===
+
+              Based on recalled knowledge:
+              1. Identify applicable patterns
+              2. Check our tests against known flaky patterns
+              3. Apply optimizations where appropriate
+              4. Note what was applied
+
+              === PHASE 3: RUN TESTS ===
+
+              Execute: npm test -- --json --outputFile=test-results.json
+              Analyze results.
+
+              === PHASE 4: CONTRIBUTE BACK ===
+
+              After testing, if you discovered NEW insights:
+
+              For valuable patterns:
+              store_memory({
+                dataset: '${DATASET_ORG_PATTERNS}',
+                content: 'New pattern from ${CIRCLE_PROJECT_REPONAME}',
+                metadata: {
+                  patternType: '[type]',
+                  name: '[name]',
+                  effectiveness: 'high|medium|low',
+                  applicableTo: ['node', 'jest'],
+                  discoveredIn: '${CIRCLE_PROJECT_REPONAME}'
+                }
+              })
+
+              For new flaky patterns:
+              store_memory({
+                dataset: '${DATASET_FLAKY_PATTERNS}',
+                content: 'Flaky pattern discovered in ${CIRCLE_PROJECT_REPONAME}',
+                metadata: {
+                  patternName: '[name]',
+                  fix: '[how to fix]'
+                }
+              })
+
+              === PHASE 5: REPORT ===
+
+              Summary:
+              - Patterns applied from org: [list]
+              - New patterns contributed: [list]
+              - Test results: [summary]
+            " --local --cwd . --yes
+
+      - store_test_results:
+          path: coverage
+
+workflows:
+  version: 2
+
+  # Apply org knowledge to tests
+  apply-knowledge:
+    jobs:
+      - apply-org-knowledge:
+          context: kubiya-secrets
+
+  # Contribute back to org
+  contribute:
+    jobs:
+      - contribute-learnings:
+          context: kubiya-secrets
+
+  # CLI-based pattern
+  cli-pattern:
+    jobs:
+      - cli-org-learning:
+          context: kubiya-secrets
+
+  # Full bidirectional flow
+  bidirectional:
+    jobs:
+      - bidirectional-learning:
+          context: kubiya-secrets
