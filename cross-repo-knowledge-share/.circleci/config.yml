@@ -66,11 +66,8 @@ commands:
       - run:
           name: Contribute Learnings to Organization
           command: |
-            # Use environment variable with default fallback
-            DATASET_ORG_PATTERNS="${KUBIYA_DATASET_ORG_PATTERNS:-default}"
-
             kubiya exec "
-              You are a pattern contributor for organizational learning.
+              You are a pattern contributor for organizational learning in ${CIRCLE_PROJECT_REPONAME}.
 
               TASK: Analyze this repository and contribute valuable patterns
 
@@ -82,24 +79,15 @@ commands:
                  - Quality tooling setup
                  - Any unique solutions
 
-              3. For each valuable pattern, contribute to org:
-                 store_memory({
-                   dataset: '${DATASET_ORG_PATTERNS}',
-                   content: 'Pattern: [name] discovered in ${CIRCLE_PROJECT_REPONAME}',
-                   metadata: {
-                     patternType: 'TEST_FRAMEWORK|CI_PATTERN|QUALITY_PATTERN',
-                     name: '[pattern name]',
-                     applicableTo: ['node', 'jest', 'javascript'],
-                     effectiveness: 'high|medium|low',
-                     discoveredIn: '${CIRCLE_PROJECT_REPONAME}',
-                     description: '[what it does]',
-                     implementation: '[how to apply it]',
-                     timestamp: '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
-                   }
-                 })
+              3. For each valuable pattern discovered:
+                 - Store it to memory for org-wide sharing
+                 - Include what technologies it applies to
+                 - Describe how to implement it
 
               4. Be selective - only store genuinely useful patterns
                  that would help other repositories
+
+              Quality over quantity - share insights that provide real value.
             " --local --cwd . --yes
 
 jobs:
@@ -177,12 +165,8 @@ jobs:
       - run:
           name: Analyze and Contribute Patterns
           command: |
-            # Use environment variables with default fallbacks
-            DATASET_ORG_PATTERNS="${KUBIYA_DATASET_ORG_PATTERNS:-default}"
-            DATASET_FLAKY_PATTERNS="${KUBIYA_DATASET_FLAKY_PATTERNS:-default}"
-
             kubiya exec "
-              You are a pattern analyst contributing to organizational knowledge.
+              You are a pattern analyst contributing to organizational knowledge for ${CIRCLE_PROJECT_REPONAME}.
 
               TASK: Discover and share valuable patterns
 
@@ -196,36 +180,16 @@ jobs:
                  - Quality tools in use
                  - CI/CD patterns
 
-              3. Check what's already in org knowledge:
-                 recall_memory('patterns from ${CIRCLE_PROJECT_REPONAME}')
+              3. Check what's already in org knowledge from memory
 
               4. For NEW patterns not yet shared:
-                 store_memory({
-                   dataset: '${DATASET_ORG_PATTERNS}',
-                   content: 'Pattern discovered in ${CIRCLE_PROJECT_REPONAME}',
-                   metadata: {
-                     patternType: '[type]',
-                     name: '[name]',
-                     applicableTo: ['technologies'],
-                     effectiveness: 'high|medium|low',
-                     discoveredIn: '${CIRCLE_PROJECT_REPONAME}',
-                     description: '[description]',
-                     implementation: '[how to use]',
-                     confidence: 0.8
-                   }
-                 })
+                 - Store them to memory for org-wide benefit
+                 - Include what technologies they apply to
+                 - Describe effectiveness and implementation
 
               5. For any FLAKY patterns found:
-                 store_memory({
-                   dataset: '${DATASET_FLAKY_PATTERNS}',
-                   content: 'Flaky pattern in ${CIRCLE_PROJECT_REPONAME}',
-                   metadata: {
-                     patternName: '[name]',
-                     description: '[what makes it flaky]',
-                     fix: '[how to fix]',
-                     severity: 'high|medium|low'
-                   }
-                 })
+                 - Store them to memory as warnings
+                 - Include what makes them flaky and how to fix
 
               Be quality-focused - only share genuinely valuable insights.
             " --local --cwd . --yes
@@ -298,19 +262,15 @@ jobs:
       - run:
           name: Bidirectional Organization Learning
           command: |
-            # Use environment variables with default fallbacks
-            DATASET_ORG_PATTERNS="${KUBIYA_DATASET_ORG_PATTERNS:-default}"
-            DATASET_FLAKY_PATTERNS="${KUBIYA_DATASET_FLAKY_PATTERNS:-default}"
-
             kubiya exec "
-              You are a bidirectional learning agent.
+              You are a bidirectional learning agent for ${CIRCLE_PROJECT_REPONAME} (branch: ${CIRCLE_BRANCH}).
 
               === PHASE 1: LEARN FROM ORGANIZATION ===
 
-              Recall what the organization knows:
-              recall_memory('CI patterns for Node.js JavaScript')
-              recall_memory('test optimization strategies that worked')
-              recall_memory('flaky patterns to avoid')
+              Recall from organizational memory:
+              - CI patterns for Node.js JavaScript
+              - Test optimization strategies that worked
+              - Flaky patterns to avoid
 
               === PHASE 2: APPLY TO THIS REPO ===
 
@@ -328,29 +288,8 @@ jobs:
               === PHASE 4: CONTRIBUTE BACK ===
 
               After testing, if you discovered NEW insights:
-
-              For valuable patterns:
-              store_memory({
-                dataset: '${DATASET_ORG_PATTERNS}',
-                content: 'New pattern from ${CIRCLE_PROJECT_REPONAME}',
-                metadata: {
-                  patternType: '[type]',
-                  name: '[name]',
-                  effectiveness: 'high|medium|low',
-                  applicableTo: ['node', 'jest'],
-                  discoveredIn: '${CIRCLE_PROJECT_REPONAME}'
-                }
-              })
-
-              For new flaky patterns:
-              store_memory({
-                dataset: '${DATASET_FLAKY_PATTERNS}',
-                content: 'Flaky pattern discovered in ${CIRCLE_PROJECT_REPONAME}',
-                metadata: {
-                  patternName: '[name]',
-                  fix: '[how to fix]'
-                }
-              })
+              - Store valuable patterns to memory for org-wide sharing
+              - Store new flaky patterns as warnings for other repos
 
               === PHASE 5: REPORT ===
 
