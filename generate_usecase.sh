@@ -147,6 +147,20 @@ After creating all files:
 - Use environment variables like \${KUBIYA_DATASET_NAME:-default} for memory datasets
 - README must be comprehensive and follow the exact template
 
+=== FILE CREATION METHOD ===
+
+IMPORTANT: Use shell commands (mkdir, cat with heredoc) to create files, NOT the Save File tool.
+This ensures files are created in the correct working directory.
+
+Example:
+  mkdir -p security-vulnerability-scanner/src
+  cat > security-vulnerability-scanner/package.json << 'EOF'
+  {
+    \"name\": \"security-vulnerability-scanner\",
+    ...
+  }
+  EOF
+
 === OUTPUT FORMAT ===
 
 After creating all files, provide a summary:
