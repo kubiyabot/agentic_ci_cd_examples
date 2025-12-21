@@ -65,36 +65,31 @@ commands:
       - run:
           name: Store Performance Baseline
           command: |
-            # Use environment variable with default fallback
-            DATASET_BASELINES="${KUBIYA_DATASET_BASELINES:-default}"
-
             kubiya exec "
-              You are a performance baseline manager.
+              You are a performance baseline manager for ${CIRCLE_PROJECT_REPONAME} (build #${CIRCLE_BUILD_NUM}, branch: ${CIRCLE_BRANCH}).
+
+              HISTORICAL BASELINES:
+              $BASELINES
 
               TASK: Update performance baselines
 
               1. Read benchmark-results.json
-              2. Compare to historical baselines:
-                 $BASELINES
+              2. Compare to historical baselines
 
-              3. If this run is representative (low variance, no anomalies):
-                 Store as new baseline:
-                 store_memory({
-                   dataset: '${DATASET_BASELINES}',
-                   content: 'Performance baseline for ${CIRCLE_PROJECT_REPONAME}',
-                   metadata: {
-                     repository: '${CIRCLE_PROJECT_REPONAME}',
-                     branch: '${CIRCLE_BRANCH}',
-                     commit: '${CIRCLE_SHA1}',
-                     buildNum: '${CIRCLE_BUILD_NUM}',
-                     benchmarks: {
-                       // Include mean, p95, stdDev for each benchmark
-                     },
-                     timestamp: '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
-                   }
-                 })
+              3. Determine if this run is representative:
+                 - Low variance in results
+                 - No anomalies or outliers
+                 - Consistent with recent trends
 
-              4. Note: Only store if this is a stable, representative run
+              4. If this is a stable, representative run:
+                 - Store as new baseline in memory
+                 - Include mean, p95, and stdDev for each benchmark
+
+              5. If this run shows anomalies:
+                 - Do not update baselines
+                 - Report why this run was excluded
+
+              Be selective - only store stable baselines to ensure accuracy.
             " --local --cwd . --yes
 
 jobs:
@@ -171,42 +166,23 @@ jobs:
       - run:
           name: Store Benchmark Results
           command: |
-            # Use environment variables with default fallbacks
-            DATASET_BENCHMARK_RUNS="${KUBIYA_DATASET_BENCHMARK_RUNS:-default}"
-            DATASET_ALERTS="${KUBIYA_DATASET_ALERTS:-default}"
-
             kubiya exec "
-              TASK: Store benchmark results
+              You are storing benchmark results for ${CIRCLE_PROJECT_REPONAME} (build #${CIRCLE_BUILD_NUM}, branch: ${CIRCLE_BRANCH}).
+
+              TASK: Store benchmark results to memory
 
               1. Read benchmark-results.json
 
-              2. Store the run record:
-                 store_memory({
-                   dataset: '${DATASET_BENCHMARK_RUNS}',
-                   content: 'Benchmark run #${CIRCLE_BUILD_NUM}',
-                   metadata: {
-                     repository: '${CIRCLE_PROJECT_REPONAME}',
-                     branch: '${CIRCLE_BRANCH}',
-                     commit: '${CIRCLE_SHA1}',
-                     buildNum: '${CIRCLE_BUILD_NUM}',
-                     status: 'pass|regression|critical_regression',
-                     regressions: [], // List of regressed benchmarks
-                     improvements: [], // List of improved benchmarks
-                     timestamp: '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
-                   }
-                 })
+              2. Store the run record to memory including:
+                 - Pass/regression status
+                 - List of regressed benchmarks (if any)
+                 - List of improved benchmarks (if any)
 
-              3. If regressions detected, create alert:
-                 store_memory({
-                   dataset: '${DATASET_ALERTS}',
-                   content: 'Performance regression in ${CIRCLE_PROJECT_REPONAME}',
-                   metadata: {
-                     alertType: 'PERFORMANCE_REGRESSION',
-                     severity: 'high|critical',
-                     affectedBenchmarks: [],
-                     details: 'Specific changes detected'
-                   }
-                 })
+              3. If regressions were detected:
+                 - Store an alert to memory with severity and details
+                 - Include which benchmarks regressed and by how much
+
+              This data enables trend analysis across builds.
             " --local --cwd . --yes
 
       # Phase 5: Update baseline if appropriate
@@ -267,20 +243,14 @@ jobs:
       - run:
           name: Analyze Performance Trends
           command: |
-            # Use environment variables with default fallbacks
-            DATASET_TRENDS="${KUBIYA_DATASET_TRENDS:-default}"
-            DATASET_ALERTS="${KUBIYA_DATASET_ALERTS:-default}"
-
             kubiya exec "
-              You are a performance trend analyst.
+              You are a performance trend analyst for ${CIRCLE_PROJECT_REPONAME}.
 
               TASK: Analyze long-term performance trends
 
-              1. Recall historical benchmark data:
-                 recall_memory('benchmark runs for ${CIRCLE_PROJECT_REPONAME}')
-                 recall_memory('performance baselines history')
+              1. Recall historical benchmark data from memory
 
-              2. For each benchmark, analyze trend:
+              2. For each benchmark, analyze the trend:
                  - Is it getting slower over time?
                  - Is it getting faster?
                  - Is it stable?
@@ -291,34 +261,13 @@ jobs:
                  - Sudden jumps
                  - Increased variance (instability)
 
-              4. Store trend analysis:
-                 store_memory({
-                   dataset: '${DATASET_TRENDS}',
-                   content: 'Performance trend analysis for ${CIRCLE_PROJECT_REPONAME}',
-                   metadata: {
-                     repository: '${CIRCLE_PROJECT_REPONAME}',
-                     period: 'weekly',
-                     benchmarkTrends: {
-                       // Each benchmark with direction and slope
-                     },
-                     recommendations: [],
-                     timestamp: '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
-                   }
-                 })
+              4. Store your trend analysis to memory for future reference
 
-              5. Create alerts for concerning trends:
-                 If any benchmark shows consistent degradation:
-                 store_memory({
-                   dataset: '${DATASET_ALERTS}',
-                   content: 'Performance degradation trend detected',
-                   metadata: {
-                     alertType: 'PERFORMANCE_TREND',
-                     severity: 'medium',
-                     benchmark: '[name]',
-                     trend: 'degrading',
-                     details: '[explanation]'
-                   }
-                 })
+              5. If any benchmark shows consistent degradation:
+                 - Store an alert to memory
+                 - Explain the trend and recommend investigation
+
+              Focus on catching slow degradation that individual runs might miss.
             " --local --cwd . --yes
 
 workflows:

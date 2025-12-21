@@ -69,42 +69,15 @@ commands:
           command: |
             echo "=== Analyzing Failure and Storing to Memory ==="
 
-            # Use environment variable with default fallback
-            DATASET_FAILURES="${KUBIYA_DATASET_FAILURES:-default}"
-
             kubiya exec "
-              You are a CI failure analyst. A test failure just occurred.
+              You are a CI failure analyst. A << parameters.test_type >> test failure just occurred in ${CIRCLE_PROJECT_REPONAME} (build #${CIRCLE_BUILD_NUM}, branch: ${CIRCLE_BRANCH}).
 
-              TASK: Analyze and document this failure
-
-              1. Read the test output and identify:
-                 - Which test(s) failed
-                 - The error message
-                 - The likely root cause
-
-              2. Categorize the failure:
-                 - INFRASTRUCTURE: Database/Redis/API connectivity
-                 - TIMEOUT: Slow response or async issues
-                 - FLAKY: Random/timing dependent
-                 - CODE: Actual bug in the code
-                 - CONFIGURATION: Environment or config issues
-
-              3. Store your analysis using store_memory:
-                 store_memory({
-                   dataset: '${DATASET_FAILURES}',
-                   content: 'Detailed failure analysis for ${CIRCLE_PROJECT_REPONAME}',
-                   metadata: {
-                     repository: '${CIRCLE_PROJECT_REPONAME}',
-                     branch: '${CIRCLE_BRANCH}',
-                     build_num: '${CIRCLE_BUILD_NUM}',
-                     test_type: '<< parameters.test_type >>',
-                     failure_type: '[INFRASTRUCTURE|TIMEOUT|FLAKY|CODE|CONFIGURATION]',
-                     root_cause: '[Your analysis]',
-                     workaround: '[Immediate fix suggestion]',
-                     permanent_fix: '[Long-term solution]',
-                     timestamp: '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
-                   }
-                 })
+              TASK:
+              1. Read the test output and identify which tests failed and why
+              2. Categorize the failure (INFRASTRUCTURE, TIMEOUT, FLAKY, CODE, or CONFIGURATION)
+              3. Analyze the root cause
+              4. Store your analysis to memory for future runs
+              5. Suggest an immediate workaround and a permanent fix
 
               Be specific and actionable in your analysis.
             " --local --cwd . --yes
@@ -152,14 +125,11 @@ jobs:
               KNOWN WORKAROUNDS:
               $WORKAROUND_CONTEXT
 
-              TASK: Prepare for test execution
+              TASK: Prepare for test execution in ${CIRCLE_PROJECT_REPONAME}
 
               1. Analyze the recalled learnings
               2. Identify if any known issues apply to this run
-              3. If there are applicable workarounds:
-                 - Adjust test timeouts if timeout issues were seen
-                 - Skip known flaky tests
-                 - Apply configuration fixes
+              3. If there are applicable workarounds, apply them (adjust timeouts, skip flaky tests, etc.)
               4. Report what adjustments were made
 
               DO NOT actually run tests - just prepare the environment.
@@ -184,30 +154,12 @@ jobs:
           name: Store Success Insights
           when: on_success
           command: |
-            # Use environment variable with default fallback
-            DATASET_BUILD_HISTORY="${KUBIYA_DATASET_BUILD_HISTORY:-default}"
-
             kubiya exec "
-              The test run succeeded.
+              The test run succeeded for ${CIRCLE_PROJECT_REPONAME} (build #${CIRCLE_BUILD_NUM}, branch: ${CIRCLE_BRANCH}).
 
-              TASK: Document successful patterns
-
-              1. If previous runs had failures that are now passing:
-                 - Document what fixed the issue
-                 - Store the resolution for future reference
-
-              2. Store a success record:
-                 store_memory({
-                   dataset: '${DATASET_BUILD_HISTORY}',
-                   content: 'Successful build for ${CIRCLE_PROJECT_REPONAME}',
-                   metadata: {
-                     repository: '${CIRCLE_PROJECT_REPONAME}',
-                     branch: '${CIRCLE_BRANCH}',
-                     build_num: '${CIRCLE_BUILD_NUM}',
-                     status: 'success',
-                     timestamp: '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
-                   }
-                 })
+              TASK:
+              1. If previous runs had failures that are now passing, document what fixed the issue
+              2. Store a success record to memory for trend tracking
             " --local --cwd . --yes
 
       - store_test_results:
@@ -231,67 +183,26 @@ jobs:
       - run:
           name: Execute Autonomous Learning Pipeline
           command: |
-            # Use environment variables with default fallbacks
-            DATASET_FAILURES="${KUBIYA_DATASET_FAILURES:-default}"
-            DATASET_TEST_PATTERNS="${KUBIYA_DATASET_TEST_PATTERNS:-default}"
-
             kubiya exec "
-              You are an intelligent CI agent with organizational memory.
+              You are an intelligent CI agent with organizational memory for ${CIRCLE_PROJECT_REPONAME}.
 
-              === PHASE 1: RECALL ORGANIZATIONAL KNOWLEDGE ===
-              Before running tests, check what the organization knows:
+              TASK: Execute tests with learning
 
-              recall_memory('test failures in ${CIRCLE_PROJECT_REPONAME}')
-              recall_memory('infrastructure issues affecting integration tests')
-              recall_memory('successful workarounds for timeout errors')
+              1. RECALL: Check organizational memory for previous test failures, infrastructure issues, and successful workarounds for this repository
 
-              === PHASE 2: ANALYZE AND PREPARE ===
-              Based on recalled knowledge:
-              1. Identify tests that have historically failed
-              2. Check if any infrastructure patterns apply
-              3. Prepare appropriate configurations
+              2. PREPARE: Based on recalled knowledge, identify and prepare for any known issues
 
-              === PHASE 3: EXECUTE TESTS ===
-              Run: npm test -- --json --outputFile=test-results.json
+              3. EXECUTE: Run the tests with: npm test -- --json --outputFile=test-results.json
 
-              === PHASE 4: ANALYZE RESULTS ===
-              Read test-results.json and analyze:
-              - Which tests passed/failed
-              - Duration of each test
-              - Any patterns in failures
+              4. ANALYZE: Read test-results.json and analyze which tests passed/failed, durations, and any patterns
 
-              === PHASE 5: LEARN AND STORE ===
-              For any NEW insights discovered:
+              5. LEARN: If you discover NEW insights (failures, patterns, workarounds), store them to memory for future runs
 
-              If failures occurred:
-              store_memory({
-                dataset: '${DATASET_FAILURES}',
-                content: 'Failure analysis: [details]',
-                metadata: {
-                  repository: '${CIRCLE_PROJECT_REPONAME}',
-                  test_file: '[failing test file]',
-                  failure_type: '[category]',
-                  root_cause: '[analysis]',
-                  severity: 'high|medium|low'
-                }
-              })
+              6. REPORT: Summarize tests executed, learnings applied, and new insights stored
 
-              If new patterns found:
-              store_memory({
-                dataset: '${DATASET_TEST_PATTERNS}',
-                content: 'Pattern discovered: [description]',
-                metadata: {
-                  pattern_type: 'flaky|slow|infrastructure',
-                  affected_tests: ['list of tests'],
-                  recommendation: '[what to do]'
-                }
-              })
-
-              === PHASE 6: REPORT ===
-              Summarize:
-              - Tests executed and results
-              - Learnings applied from memory
-              - New insights stored for future runs
+              Repository: ${CIRCLE_PROJECT_REPONAME}
+              Branch: ${CIRCLE_BRANCH}
+              Build: ${CIRCLE_BUILD_NUM}
             " --local --cwd . --yes
 
       - store_test_results:

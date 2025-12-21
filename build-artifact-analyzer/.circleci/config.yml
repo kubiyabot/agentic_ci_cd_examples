@@ -67,13 +67,14 @@ commands:
           command: |
             echo "=== Ingesting Build Artifacts ==="
 
-            # Use environment variables with default fallbacks
-            DATASET_BUILD_HISTORY="${KUBIYA_DATASET_BUILD_HISTORY:-default}"
-            DATASET_ALERTS="${KUBIYA_DATASET_ALERTS:-default}"
-
-            # Run analysis and store via agent
             kubiya exec "
-              You are a build artifact analyzer with memory capabilities.
+              You are a build artifact analyzer for ${CIRCLE_PROJECT_REPONAME} (build #${CIRCLE_BUILD_NUM}, branch: ${CIRCLE_BRANCH}).
+
+              PREVIOUS BUILD DATA:
+              $BUILD_HISTORY
+
+              BASELINES:
+              $BASELINES
 
               TASK: Analyze and ingest build results
 
@@ -86,43 +87,18 @@ commands:
                  - Coverage percentages
                  - Slow test count
 
-              4. Compare to historical baselines:
-                 PREVIOUS BUILD DATA:
-                 $BUILD_HISTORY
+              4. Compare to historical baselines and determine:
+                 - Is this build faster or slower than average?
+                 - Is coverage improving or declining?
+                 - Any anomalies compared to recent builds?
 
-                 BASELINES:
-                 $BASELINES
+              5. Store the build record to memory for trend tracking
 
-              5. Store the build record:
-                 store_memory({
-                   dataset: '${DATASET_BUILD_HISTORY}',
-                   content: 'Build #${CIRCLE_BUILD_NUM} results for ${CIRCLE_PROJECT_REPONAME}',
-                   metadata: {
-                     repository: '${CIRCLE_PROJECT_REPONAME}',
-                     branch: '${CIRCLE_BRANCH}',
-                     commit: '${CIRCLE_SHA1}',
-                     buildNum: '${CIRCLE_BUILD_NUM}',
-                     buildUrl: '${CIRCLE_BUILD_URL}',
-                     totalDuration: '[calculated]',
-                     testsRun: '[from results]',
-                     testsPassed: '[from results]',
-                     testsFailed: '[from results]',
-                     coverage: '[from coverage]',
-                     status: 'success|regression|improvement',
-                     timestamp: '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
-                   }
-                 })
+              6. If you detect a performance regression (>50% slower than baseline):
+                 - Store an alert to memory
+                 - Report the regression with details
 
-              6. If performance regression detected (>50% slower):
-                 store_memory({
-                   dataset: '${DATASET_ALERTS}',
-                   content: 'Performance regression in build #${CIRCLE_BUILD_NUM}',
-                   metadata: {
-                     type: 'PERFORMANCE_REGRESSION',
-                     severity: 'high',
-                     details: '[what regressed]'
-                   }
-                 })
+              Be thorough in your analysis and store insights for future builds.
             " --local --cwd . --yes
 
   upload-coverage-artifacts:
@@ -229,59 +205,31 @@ jobs:
       - run:
           name: Analyze Build Trends
           command: |
-            # Use environment variables with default fallbacks
-            DATASET_TRENDS="${KUBIYA_DATASET_TRENDS:-default}"
-            DATASET_ALERTS="${KUBIYA_DATASET_ALERTS:-default}"
-
             kubiya exec "
-              You are a CI trend analyst with memory capabilities.
+              You are a CI trend analyst for ${CIRCLE_PROJECT_REPONAME}.
 
-              TASK: Analyze build trends for ${CIRCLE_PROJECT_REPONAME}
+              TASK: Analyze build trends and identify patterns
 
-              1. Recall recent build history:
-                 recall_memory('build history for ${CIRCLE_PROJECT_REPONAME}')
+              1. Recall recent build history and performance data from memory
 
-              2. Recall all performance data:
-                 recall_memory('performance baselines for ${CIRCLE_PROJECT_REPONAME}')
-                 recall_memory('test duration trends')
-
-              3. Analyze trends:
+              2. Analyze trends across recent builds:
                  - Build duration: increasing, stable, or decreasing?
                  - Coverage: improving or declining?
                  - Failure rate: getting better or worse?
                  - Flaky test count: trending up or down?
 
-              4. Identify patterns:
+              3. Identify patterns:
                  - Which modules are getting slower?
                  - Which tests fail most often?
                  - What times of day have most failures?
 
-              5. Store trend analysis:
-                 store_memory({
-                   dataset: '${DATASET_TRENDS}',
-                   content: 'Weekly trend analysis for ${CIRCLE_PROJECT_REPONAME}',
-                   metadata: {
-                     repository: '${CIRCLE_PROJECT_REPONAME}',
-                     period: 'weekly',
-                     durationTrend: 'increasing|stable|decreasing',
-                     coverageTrend: 'improving|stable|declining',
-                     failureTrend: 'improving|stable|worsening',
-                     recommendations: ['list of actions'],
-                     timestamp: '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
-                   }
-                 })
+              4. Store your trend analysis to memory for future reference
 
-              6. If concerning trends detected:
-                 store_memory({
-                   dataset: '${DATASET_ALERTS}',
-                   content: 'Trend alert for ${CIRCLE_PROJECT_REPONAME}',
-                   metadata: {
-                     alertType: '[type]',
-                     severity: 'high|medium|low',
-                     details: '[explanation]',
-                     action: '[recommended action]'
-                   }
-                 })
+              5. If you detect concerning trends (consistent degradation, increasing failures):
+                 - Store an alert to memory
+                 - Provide specific recommendations
+
+              Focus on actionable insights that can improve CI health.
             " --local --cwd . --yes
 
   # ============================================================
