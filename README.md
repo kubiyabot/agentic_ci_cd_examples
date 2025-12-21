@@ -295,131 +295,113 @@ kubiya exec "..." --local --cwd . --yes
 
 ## Creating New Use Cases
 
-Generate a new use case automatically with Kubiya:
+Want to add your own CI/CD use case? Use the generator script - it creates everything for you automatically.
 
-```bash
-# Using the script directly
-./generate_usecase.sh "Description of your use case"
+### Quick Start
 
-# Or using make
-make generate-usecase DESC="Description of your use case"
-```
-
-**Examples:**
 ```bash
 ./generate_usecase.sh "Detect security vulnerabilities in npm dependencies"
-./generate_usecase.sh "Track and reduce Docker image sizes across builds"
-./generate_usecase.sh "Analyze code coverage trends and alert on drops"
 ```
 
-The generator will:
-1. Analyze existing use cases for patterns
-2. Create a new directory with all required files
-3. Generate tests, source code, and CI/CD config
-4. Provide suggested Makefile targets to add
+That's it! Kubiya will create a complete, working use case with tests, CI/CD config, and documentation.
 
-### Example Output
+### More Examples
+
+```bash
+# Security scanning
+./generate_usecase.sh "Scan Docker images for CVEs before deployment"
+
+# Cost optimization
+./generate_usecase.sh "Track and alert on AWS resource costs in CI"
+
+# Code quality
+./generate_usecase.sh "Enforce code coverage thresholds and block PRs below 80%"
+
+# Using make
+make generate-usecase DESC="Your use case description here"
+```
+
+### What Gets Created
 
 ```
+your-use-case-name/
+├── package.json           # Project config with test scripts
+├── jest.config.js         # Test framework setup
+├── README.md              # How to use this example
+├── .gitignore
+├── .circleci/
+│   └── config.yml         # CI/CD pipeline (baseline + Kubiya-enhanced)
+├── src/
+│   └── *.js               # Implementation code
+└── __tests__/
+    └── unit/
+        └── *.test.js      # Working tests
+```
+
+### Example Session
+
+```bash
+$ ./generate_usecase.sh "Detect security vulnerabilities in npm dependencies"
+
 === Kubiya Use Case Generator ===
 
 Generating use case for:
   Detect security vulnerabilities in npm dependencies
 
-This will:
-  1. Analyze existing use cases for patterns
-  2. Create a new directory with all required files
-  3. Generate tests, source code, and CI/CD config
-
-Executing task: "You are a CI/CD use case generator..."
-
-💻 Local Execution Mode
-   • Running with ephemeral local worker
-   • Using fast planning mode
-
 🤖 Intelligent Task Planning
 ✓ Discovered 21 agents, 17 teams, 7 environments
-
-⚙️  Generating execution plan...
-  [initializing] 🚀 Initializing AI Task Planner...
-  [analyzing] 🔍 Discovering available agents and teams...
-  [generating] 📋 Creating detailed execution plan...
-  [completed] ✅ Execution plan generated successfully!
-
 ✓ Plan generated successfully
+
   🤖 Using agent: Security Engineer
-  📋 Summary: Create comprehensive CI/CD use case for npm vulnerability detection...
+  📋 Summary: Create CI/CD use case for npm vulnerability detection
   💰 Estimated cost: $0.41
 
-╭───────────────────────────────────────────────────────────────────────╮
-│  Complexity: 8 story points (high confidence)                         │
-│  Title: Create npm Security Vulnerability Scanner CI/CD Use Case      │
-╰───────────────────────────────────────────────────────────────────────╯
-
-📦 Creating ephemeral worker queue...
-✓ Queue created
-
 🚀 Starting local worker...
-┌───────────────── Worker Startup ──────────────────┐
-| 🚀 Starting Kubiya Agent Worker                   |
-└───────────────────────────────────────────────────┘
-[1/3] SUCCESS: Environment ready
-[2/3] SUCCESS: Dependencies installed
-[3/3] ✓ Worker started
+✓ Worker ready (16s)
 
 ╭───────────────────────────────────╮
 │ CONNECTED • Execution d9f4aea8    │
 ╰───────────────────────────────────╯
 
-👤 User:
-Create a comprehensive CI/CD use case that detects npm security vulnerabilities...
-
 💬 Assistant:
-I'll create a comprehensive CI/CD pipeline for vulnerability detection...
+Creating security vulnerability scanner...
 
-✓ 💻 Bash (mkdir -p npm-vulnerability-scanner/src)
-✓ ✏️ Write (package.json)
-✓ ✏️ Write (.circleci/config.yml)
-✓ ✏️ Write (src/index.js)
-✓ ✏️ Write (__tests__/unit/scanner.test.js)
-✓ ✏️ Write (README.md)
-✓ ✏️ Write (jest.config.js)
-✓ ✏️ Write (.gitignore)
+✓ 💻 Bash    mkdir -p security-vulnerability-scanner/src
+✓ ✏️ Write   package.json
+✓ ✏️ Write   jest.config.js
+✓ ✏️ Write   .circleci/config.yml
+✓ ✏️ Write   src/scanner.js
+✓ ✏️ Write   __tests__/unit/scanner.test.js
+✓ ✏️ Write   README.md
+✓ ✏️ Write   .gitignore
 
 ╭──────────────────────────────╮
-│ DONE • Completed in 45.2s    │
+│ DONE • Completed in 45s      │
 ╰──────────────────────────────╯
-
-✓ Worker shut down
-🧹 Cleaning up ephemeral queue...
 
 === Use case generation complete ===
 
 Next steps:
-  1. cd into the new directory
-  2. Run 'npm install'
-  3. Run 'npm test' to validate tests pass
-  4. Add the suggested Makefile targets
-  5. Commit and push your changes
+  1. cd security-vulnerability-scanner
+  2. npm install
+  3. npm test
+  4. Add Makefile targets (see suggestions above)
 ```
 
-### Generated Directory Structure
+### After Generation
 
-After running the generator, you'll have a complete use case:
+```bash
+# Navigate to your new use case
+cd security-vulnerability-scanner
 
-```
-npm-vulnerability-scanner/
-├── package.json              # Dependencies and scripts
-├── jest.config.js            # Test configuration
-├── .gitignore                # Git ignores
-├── README.md                 # Documentation
-├── .circleci/
-│   └── config.yml            # CI/CD pipeline with Kubiya
-├── src/
-│   └── scanner.js            # Implementation
-└── __tests__/
-    └── unit/
-        └── scanner.test.js   # Tests
+# Install dependencies
+npm install
+
+# Verify tests pass
+npm test
+
+# Try it with Kubiya
+kubiya exec "Scan for vulnerabilities and report findings" --local --cwd . --yes
 ```
 
 ---
