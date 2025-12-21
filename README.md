@@ -293,6 +293,33 @@ kubiya exec "..." --local --cwd . --yes
 
 ---
 
+## Creating New Use Cases
+
+Generate a new use case automatically with Kubiya:
+
+```bash
+# Using the script directly
+./generate_usecase.sh "Description of your use case"
+
+# Or using make
+make generate-usecase DESC="Description of your use case"
+```
+
+**Examples:**
+```bash
+./generate_usecase.sh "Detect security vulnerabilities in npm dependencies"
+./generate_usecase.sh "Track and reduce Docker image sizes across builds"
+./generate_usecase.sh "Analyze code coverage trends and alert on drops"
+```
+
+The generator will:
+1. Analyze existing use cases for patterns
+2. Create a new directory with all required files
+3. Generate tests, source code, and CI/CD config
+4. Provide suggested Makefile targets to add
+
+---
+
 ## Learn More
 
 - [Kubiya Documentation](https://docs.kubiya.ai/)
