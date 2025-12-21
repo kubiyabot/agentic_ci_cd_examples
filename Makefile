@@ -25,6 +25,10 @@ endif
 # Directories
 FLAKY_DIR := fleaky-tests-circleci
 SMART_DIR := smart-test-selection
+INCIDENT_DIR := incident-learning-pipeline
+ARTIFACT_DIR := build-artifact-analyzer
+PERF_DIR := performance-regression-detector
+CROSSREPO_DIR := cross-repo-knowledge-share
 
 # Colors for output (works on macOS and Linux)
 GREEN := \033[0;32m
@@ -36,6 +40,10 @@ NC := \033[0m # No Color
 .PHONY: help setup setup-deps check-env check-kubiya \
         test-flaky test-flaky-kubiya test-flaky-stable \
         test-smart test-smart-kubiya test-smart-tasks \
+        test-incident test-incident-kubiya \
+        test-artifact test-artifact-kubiya \
+        test-perf test-perf-kubiya \
+        test-crossrepo test-crossrepo-kubiya \
         circleci-flaky circleci-flaky-kubiya \
         circleci-smart circleci-smart-kubiya \
         demo clean
@@ -66,6 +74,22 @@ help:
 	@echo "  make test-smart-tasks   Run only tasks module tests"
 	@echo "  make test-smart-kubiya  Run with Kubiya agent"
 	@echo ""
+	@echo "$(BLUE)Incident Learning Pipeline:$(NC)"
+	@echo "  make test-incident        Run all tests (may fail randomly)"
+	@echo "  make test-incident-kubiya Run with Kubiya learning agent"
+	@echo ""
+	@echo "$(BLUE)Build Artifact Analyzer:$(NC)"
+	@echo "  make test-artifact        Run tests with coverage"
+	@echo "  make test-artifact-kubiya Run with Kubiya analysis"
+	@echo ""
+	@echo "$(BLUE)Performance Regression Detector:$(NC)"
+	@echo "  make test-perf            Run benchmarks"
+	@echo "  make test-perf-kubiya     Run with baseline comparison"
+	@echo ""
+	@echo "$(BLUE)Cross-Repo Knowledge Share:$(NC)"
+	@echo "  make test-crossrepo        Run pattern detection tests"
+	@echo "  make test-crossrepo-kubiya Run with org learning"
+	@echo ""
 	@echo "$(BLUE)Utilities:$(NC)"
 	@echo "  make demo               Run full demo (all examples)"
 	@echo "  make clean              Clean up node_modules and coverage"
@@ -83,6 +107,14 @@ setup-deps:
 	@cd $(FLAKY_DIR) && npm install
 	@echo "$(GREEN)Installing dependencies for smart-test-selection example...$(NC)"
 	@cd $(SMART_DIR) && npm install
+	@echo "$(GREEN)Installing dependencies for incident-learning-pipeline example...$(NC)"
+	@cd $(INCIDENT_DIR) && npm install
+	@echo "$(GREEN)Installing dependencies for build-artifact-analyzer example...$(NC)"
+	@cd $(ARTIFACT_DIR) && npm install
+	@echo "$(GREEN)Installing dependencies for performance-regression-detector example...$(NC)"
+	@cd $(PERF_DIR) && npm install
+	@echo "$(GREEN)Installing dependencies for cross-repo-knowledge-share example...$(NC)"
+	@cd $(CROSSREPO_DIR) && npm install
 	@echo "$(GREEN)Dependencies installed!$(NC)"
 
 # Full setup with environment check
@@ -199,7 +231,139 @@ test-smart-kubiya: check-kubiya
 	" --local --cwd . --yes
 
 # =============================================================================
-# Demo - Run both examples
+# Incident Learning Pipeline - Local Tests
+# =============================================================================
+
+test-incident:
+	@echo "$(YELLOW)Running incident learning pipeline tests...$(NC)"
+	@echo "Some tests may fail due to simulated infrastructure issues"
+	@cd $(INCIDENT_DIR) && npm test || true
+
+test-incident-kubiya: check-kubiya
+	@echo "$(GREEN)Running Kubiya incident learning pipeline...$(NC)"
+	@cd $(INCIDENT_DIR) && kubiya exec " \
+		You are a CI agent that learns from failures. \
+		\
+		STEP 1: Run tests: npm test -- --json --outputFile=test-results.json \
+		\
+		STEP 2: If failures occur, analyze root cause: \
+		- TIMEOUT: Connection or async issues \
+		- CONNECTION: Database/API unavailable \
+		- FLAKY: Random/timing dependent \
+		\
+		STEP 3: Use store_memory to save learnings: \
+		store_memory({ \
+		  dataset: 'ci-failure-learnings', \
+		  content: 'Failure analysis', \
+		  metadata: { failure_type, root_cause, workaround } \
+		}) \
+		\
+		STEP 4: Report what was learned for future runs. \
+	" --local --cwd . --yes
+
+# =============================================================================
+# Build Artifact Analyzer - Local Tests
+# =============================================================================
+
+test-artifact:
+	@echo "$(YELLOW)Running build artifact analyzer tests...$(NC)"
+	@cd $(ARTIFACT_DIR) && npm run test:coverage
+
+test-artifact-kubiya: check-kubiya
+	@echo "$(GREEN)Running Kubiya build artifact analysis...$(NC)"
+	@cd $(ARTIFACT_DIR) && kubiya exec " \
+		You are a build analyzer with memory capabilities. \
+		\
+		STEP 1: Run tests with coverage: npm run test:json \
+		\
+		STEP 2: Recall previous build history: \
+		recall_memory('build history for this repo') \
+		\
+		STEP 3: Analyze current results vs baseline: \
+		- Test pass rate \
+		- Duration comparison \
+		- Coverage trends \
+		\
+		STEP 4: Store build metrics to memory: \
+		store_memory({ \
+		  dataset: 'ci-build-history', \
+		  content: 'Build results', \
+		  metadata: { tests_run, tests_passed, duration, coverage } \
+		}) \
+		\
+		STEP 5: Report trends and anomalies. \
+	" --local --cwd . --yes
+
+# =============================================================================
+# Performance Regression Detector - Local Tests
+# =============================================================================
+
+test-perf:
+	@echo "$(YELLOW)Running performance benchmarks...$(NC)"
+	@cd $(PERF_DIR) && npm run benchmark
+
+test-perf-kubiya: check-kubiya
+	@echo "$(GREEN)Running Kubiya performance regression detection...$(NC)"
+	@cd $(PERF_DIR) && kubiya exec " \
+		You are a performance guardian with memory capabilities. \
+		\
+		STEP 1: Recall performance baselines: \
+		recall_memory('performance baselines for this repo') \
+		\
+		STEP 2: Run benchmarks: npm run benchmark:json \
+		\
+		STEP 3: Compare to baseline: \
+		- ratio > 1.5 = REGRESSION \
+		- ratio < 0.8 = IMPROVEMENT \
+		\
+		STEP 4: Store results: \
+		store_memory({ \
+		  dataset: 'ci-performance-baselines', \
+		  content: 'Benchmark results', \
+		  metadata: { benchmarks, status, timestamp } \
+		}) \
+		\
+		STEP 5: Alert on regressions. \
+	" --local --cwd . --yes
+
+# =============================================================================
+# Cross-Repo Knowledge Share - Local Tests
+# =============================================================================
+
+test-crossrepo:
+	@echo "$(YELLOW)Running cross-repo pattern detection tests...$(NC)"
+	@cd $(CROSSREPO_DIR) && npm test
+
+test-crossrepo-kubiya: check-kubiya
+	@echo "$(GREEN)Running Kubiya org knowledge sharing...$(NC)"
+	@cd $(CROSSREPO_DIR) && kubiya exec " \
+		You are an org learning agent. \
+		\
+		STEP 1: Recall org-wide patterns: \
+		recall_memory('CI patterns for Node.js') \
+		recall_memory('flaky test patterns across org') \
+		\
+		STEP 2: Detect patterns in this repo: \
+		- Test frameworks and configs \
+		- Quality tools \
+		- CI/CD patterns \
+		\
+		STEP 3: Apply relevant org patterns. \
+		\
+		STEP 4: Run tests: npm test \
+		\
+		STEP 5: Contribute new patterns back to org: \
+		store_memory({ \
+		  dataset: 'org-ci-patterns', \
+		  content: 'Pattern discovered', \
+		  metadata: { patternType, applicableTo, effectiveness } \
+		}) \
+		\
+		STEP 6: Report what was learned and contributed. \
+	" --local --cwd . --yes
+
+# =============================================================================
+# Demo - Run all examples
 # =============================================================================
 
 demo: check-kubiya
@@ -231,5 +395,11 @@ clean:
 	@echo "Cleaning up..."
 	@rm -rf $(FLAKY_DIR)/node_modules $(FLAKY_DIR)/coverage
 	@rm -rf $(SMART_DIR)/node_modules $(SMART_DIR)/coverage
+	@rm -rf $(INCIDENT_DIR)/node_modules $(INCIDENT_DIR)/coverage
+	@rm -rf $(ARTIFACT_DIR)/node_modules $(ARTIFACT_DIR)/artifacts
+	@rm -rf $(PERF_DIR)/node_modules $(PERF_DIR)/benchmark-results.json
+	@rm -rf $(CROSSREPO_DIR)/node_modules $(CROSSREPO_DIR)/coverage
 	@rm -rf $(FLAKY_DIR)/.kubiya $(SMART_DIR)/.kubiya
+	@rm -rf $(INCIDENT_DIR)/.kubiya $(ARTIFACT_DIR)/.kubiya
+	@rm -rf $(PERF_DIR)/.kubiya $(CROSSREPO_DIR)/.kubiya
 	@echo "$(GREEN)Clean complete$(NC)"

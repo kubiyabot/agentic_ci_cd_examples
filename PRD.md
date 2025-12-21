@@ -2006,4 +2006,689 @@ Before merging documentation changes:
 
 ---
 
+# Additional Use Cases: Cognitive Memory in CI/CD
+
+This section describes additional end-to-end use cases that demonstrate the value of Kubiya's cognitive memory capabilities in CI/CD pipelines.
+
+## Use Case 7: Pipeline Failure Learning Loop
+
+### Problem Statement
+When CI pipelines fail, the same issues often recur across teams and repositories. Each developer independently investigates the same root causes, wastes time on known issues, and there's no organizational learning from failures.
+
+### Solution
+Agents analyze failures, store root cause analysis to cognitive memory, and recall learnings in subsequent runs to prevent recurrence.
+
+### Implementation
+
+#### CircleCI Job Configuration
+```yaml
+jobs:
+  learning-pipeline:
+    docker:
+      - image: cimg/node:20.11
+    environment:
+      KUBIYA_API_KEY: ${KUBIYA_API_KEY}
+      KUBIYA_NON_INTERACTIVE: "true"
+    steps:
+      - checkout
+      - run: npm ci
+
+      - run:
+          name: Install Kubiya CLI
+          command: |
+            curl -fsSL https://raw.githubusercontent.com/kubiyabot/cli/main/install.sh | bash
+            echo 'export PATH="$HOME/.kubiya/bin:$PATH"' >> $BASH_ENV
+
+      - run:
+          name: Pre-Execution Learning Recall
+          command: |
+            export PATH="$HOME/.kubiya/bin:$PATH"
+
+            # Approach A: CLI recall, pass as context
+            FAILURE_CONTEXT=$(kubiya memory recall "failures in ${CIRCLE_PROJECT_REPONAME}" \
+              --top-k 10 --output json 2>/dev/null || echo "{}")
+
+            kubiya exec "
+              CONTEXT FROM ORGANIZATIONAL MEMORY:
+              $FAILURE_CONTEXT
+
+              TASK: Prepare for test execution
+              1. Review the recalled failure patterns above
+              2. Identify any tests that should be skipped or handled specially
+              3. Note any timeout adjustments needed
+              4. Create a test execution plan
+
+              OUTPUT: JSON with test_plan, skipped_tests, timeout_adjustments
+            " --local --cwd . --yes --output json > /tmp/test-plan.json
+
+      - run:
+          name: Execute Tests with Applied Learnings
+          command: |
+            export PATH="$HOME/.kubiya/bin:$PATH"
+
+            kubiya exec "
+              Read the test plan from /tmp/test-plan.json
+
+              Execute tests according to the plan:
+              - Skip tests marked as problematic
+              - Apply timeout adjustments
+              - Run: npm test
+
+              Capture results to /tmp/test-results.json
+            " --local --cwd . --yes
+
+      - run:
+          name: Analyze and Store Failure Learnings
+          when: on_fail
+          command: |
+            export PATH="$HOME/.kubiya/bin:$PATH"
+
+            kubiya exec "
+              A test failure just occurred.
+
+              TASK: Analyze and document the failure for organizational learning
+
+              PHASE 1 - ANALYZE:
+              1. Read /tmp/test-results.json for failure details
+              2. Identify the failing test file
+              3. Read the test code to understand root cause
+              4. Classify the failure:
+                 - Is it a real bug? → Document for developers
+                 - Is it a flaky test? → Add to flaky registry
+                 - Is it an environment issue? → Document setup fix
+                 - Is it a timeout? → Document timing solution
+
+              PHASE 2 - STORE:
+              Use store_memory to preserve the learning:
+              store_memory({
+                dataset: 'ci-failure-learnings',
+                content: '[Failure description] - Root cause: [cause] - Fix: [fix]',
+                metadata: {
+                  repository: '${CIRCLE_PROJECT_REPONAME}',
+                  branch: '${CIRCLE_BRANCH}',
+                  build_num: '${CIRCLE_BUILD_NUM}',
+                  failure_type: '[type]',
+                  test_file: '[path]',
+                  root_cause: '[detailed explanation]',
+                  fix_applied: false,
+                  workaround: '[immediate workaround]',
+                  permanent_fix: '[long-term solution]',
+                  severity: '[high|medium|low]',
+                  first_seen: '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
+                }
+              })
+
+              PHASE 3 - REPORT:
+              Output a failure analysis report
+            " --local --cwd . --yes
+
+      - run:
+          name: Store Success Metrics
+          when: on_success
+          command: |
+            export PATH="$HOME/.kubiya/bin:$PATH"
+
+            kubiya memory store \
+              --title "Build #${CIRCLE_BUILD_NUM}: Success" \
+              --content "Repository: ${CIRCLE_PROJECT_REPONAME}
+            Branch: ${CIRCLE_BRANCH}
+            Status: SUCCESS
+
+            Applied learnings from organizational memory:
+            - Skipped known problematic tests
+            - Applied timeout adjustments
+            - Used optimized test configuration
+
+            This demonstrates the value of accumulated learning." \
+              --dataset-id ci-build-history \
+              --tags success,${CIRCLE_BRANCH},learning-applied
+```
+
+### Expected Outcomes
+- First failure: Agent analyzes and stores root cause
+- Subsequent runs: Agent recalls the failure pattern and avoids it
+- Organizational benefit: All team members benefit from any individual's learning
+
+---
+
+## Use Case 8: Build Artifact Ingestion & Trend Analysis
+
+### Problem Statement
+Build artifacts (test results, coverage reports, timing data) are lost after each pipeline run. There's no historical trend analysis or pattern recognition across builds.
+
+### Solution
+Systematically ingest build artifacts into cognitive memory datasets, enabling trend analysis and anomaly detection.
+
+### Implementation
+
+#### Approach A: CLI Direct Ingestion
+```bash
+# Run tests and capture JSON results
+npm test -- --json --outputFile=test-results.json
+
+# Parse and store structured build data via CLI
+kubiya memory store \
+  --title "Build #${CIRCLE_BUILD_NUM}: Test Results" \
+  --content "Repository: ${CIRCLE_PROJECT_REPONAME}
+Branch: ${CIRCLE_BRANCH}
+Commit: ${CIRCLE_SHA1}
+
+Test Results:
+- Total: $(jq '.numTotalTests' test-results.json)
+- Passed: $(jq '.numPassedTests' test-results.json)
+- Failed: $(jq '.numFailedTests' test-results.json)
+- Duration: $(jq '.testResults | map(.perfStats.runtime) | add / 1000' test-results.json)s
+
+Module Breakdown:
+$(jq -r '.testResults[] | "- \(.name): \(.status) (\(.perfStats.runtime)ms)"' test-results.json)" \
+  --dataset-id ci-build-history \
+  --tags build,${CIRCLE_BRANCH},tests
+
+# Upload coverage artifacts
+kubiya memory dataset upload ci-coverage-reports ./coverage/ \
+  --title "Coverage Report Build #${CIRCLE_BUILD_NUM}" \
+  --tags coverage,${CIRCLE_BRANCH}
+```
+
+#### Approach B: Agent-Native Intelligent Ingestion
+```bash
+kubiya exec "
+  TASK: Analyze and ingest build results with trend analysis
+
+  PHASE 1 - PARSE RESULTS:
+  Read test-results.json and extract:
+  - Total tests, passed, failed, skipped
+  - Duration per module
+  - Any new failures vs previous builds
+
+  PHASE 2 - RECALL HISTORICAL DATA:
+  recall_memory('recent build results for ${CIRCLE_PROJECT_REPONAME}')
+  Use this to compare current results to historical trends
+
+  PHASE 3 - TREND ANALYSIS:
+  Compare current build to historical data:
+  - Is test count increasing? (good: more coverage)
+  - Is duration increasing? (bad: performance regression)
+  - Are failures recurring? (bad: unresolved issues)
+  - Is coverage improving? (good: better quality)
+
+  PHASE 4 - STORE WITH ANALYSIS:
+  store_memory({
+    dataset: 'ci-build-history',
+    content: 'Build #${CIRCLE_BUILD_NUM} analysis with trends',
+    metadata: {
+      build_num: '${CIRCLE_BUILD_NUM}',
+      repository: '${CIRCLE_PROJECT_REPONAME}',
+      branch: '${CIRCLE_BRANCH}',
+      tests_passed: [count],
+      tests_failed: [count],
+      duration_seconds: [duration],
+      trend_vs_previous: 'improving|stable|degrading',
+      anomalies_detected: ['list of anomalies'],
+      recommendations: ['list of recommendations']
+    }
+  })
+
+  OUTPUT: JSON with trend analysis and recommendations
+" --local --cwd . --yes
+```
+
+#### CircleCI Integration
+```yaml
+jobs:
+  build-with-ingestion:
+    steps:
+      # ... standard setup ...
+
+      - run:
+          name: Run Tests with JSON Output
+          command: npm test -- --json --outputFile=test-results.json
+
+      - run:
+          name: Ingest Build Artifacts
+          when: always
+          command: |
+            export PATH="$HOME/.kubiya/bin:$PATH"
+
+            # Store structured results
+            kubiya memory store \
+              --title "Build #${CIRCLE_BUILD_NUM}" \
+              --content "$(cat test-results.json | jq -r '.testResults | map(.name + ": " + .status) | join("\n")')" \
+              --dataset-id ci-build-history \
+              --tags build,${CIRCLE_BRANCH}
+
+            # If coverage exists, upload it
+            if [ -d "./coverage" ]; then
+              kubiya memory dataset upload ci-coverage ./coverage/ \
+                --title "Coverage Build #${CIRCLE_BUILD_NUM}"
+            fi
+```
+
+---
+
+## Use Case 9: Cross-Repository Pattern Learning
+
+### Problem Statement
+Each repository starts from zero knowledge. Common problems (flaky test patterns, configuration issues, dependency conflicts) are solved independently in each repo without organizational learning.
+
+### Solution
+Share learnings across repositories using org-scoped memory datasets. Agents contribute patterns discovered in one repo that benefit all others.
+
+### Implementation
+
+#### Phase 1: Recall Org-Wide Patterns Before Execution
+```bash
+# CLI approach: Pre-fetch org patterns
+ORG_PATTERNS=$(kubiya memory recall "CI optimization patterns for Node.js" \
+  --top-k 10 --output json)
+
+FLAKY_SIGNATURES=$(kubiya memory recall "common flaky test signatures" \
+  --top-k 20 --output json)
+
+# Pass to agent as context
+kubiya exec "
+  ORGANIZATION-WIDE PATTERNS:
+  $ORG_PATTERNS
+
+  KNOWN FLAKY SIGNATURES ACROSS ORG:
+  $FLAKY_SIGNATURES
+
+  TASK:
+  1. Check if any org patterns apply to this repository
+  2. Compare test files against known flaky signatures
+  3. Apply relevant optimizations (e.g., Jest --runInBand for certain patterns)
+  4. Run tests with org-learned strategies
+  5. Report which patterns were applicable
+" --local --cwd . --yes
+```
+
+#### Phase 2: Contribute Learnings Back to Org
+```bash
+kubiya exec "
+  You have access to organizational knowledge.
+
+  TASK: Analyze this repository and contribute valuable patterns
+
+  PHASE 1 - DISCOVER:
+  Analyze test files for patterns that might be valuable org-wide:
+  - Unique flaky test patterns
+  - Effective test isolation strategies
+  - Performance optimization techniques
+  - Configuration best practices
+
+  PHASE 2 - EVALUATE:
+  For each pattern discovered:
+  - Is it specific to this repo or generally applicable?
+  - Would other Node.js/Jest projects benefit?
+  - Is it high-impact (saves significant time/failures)?
+
+  PHASE 3 - CONTRIBUTE:
+  For patterns worth sharing, use store_memory with ORG scope:
+  store_memory({
+    dataset: 'org-ci-patterns',
+    content: 'Pattern: [description] - Benefit: [impact]',
+    metadata: {
+      pattern_type: 'flaky-detection|optimization|configuration',
+      applicable_to: ['node', 'jest', 'react'],
+      discovered_in: '${CIRCLE_PROJECT_REPONAME}',
+      effectiveness: 'high|medium|low',
+      implementation: 'How to apply this pattern',
+      example_code: 'Code snippet if applicable'
+    }
+  })
+
+  Be selective - only store genuinely useful patterns that would help other teams.
+" --local --cwd . --yes
+```
+
+#### Org-Wide Memory Datasets Schema
+| Dataset | Scope | Purpose |
+|---------|-------|---------|
+| `org-ci-patterns` | ORG | Reusable CI optimization patterns |
+| `org-flaky-signatures` | ORG | Known flaky test signatures |
+| `org-dependency-issues` | ORG | Problematic dependency combinations |
+| `org-best-practices` | ORG | Proven configuration strategies |
+
+---
+
+## Use Case 10: Performance Regression Detection
+
+### Problem Statement
+Test performance degrades slowly over time. Without baseline tracking, regressions go unnoticed until they cause pipeline timeouts.
+
+### Solution
+Track module timing baselines in cognitive memory. Detect anomalies by comparing current runs to historical baselines.
+
+### Implementation
+
+#### Phase 1: Establish Baselines
+```bash
+kubiya exec "
+  TASK: Establish performance baselines for test modules
+
+  1. Run tests with timing: npm test -- --json
+  2. Extract per-module timing from results
+  3. Store baselines:
+
+  store_memory({
+    dataset: 'ci-performance-baselines',
+    content: 'Performance baselines for ${CIRCLE_PROJECT_REPONAME}',
+    metadata: {
+      repository: '${CIRCLE_PROJECT_REPONAME}',
+      modules: {
+        'tasks': { avg_ms: 1200, p95_ms: 1800, test_count: 8 },
+        'projects': { avg_ms: 1800, p95_ms: 2500, test_count: 10 },
+        'comments': { avg_ms: 600, p95_ms: 900, test_count: 5 }
+      },
+      established_at: '$(date -u +%Y-%m-%dT%H:%M:%SZ)',
+      sample_size: 10
+    }
+  })
+" --local --cwd . --yes
+```
+
+#### Phase 2: Detect Regressions
+```bash
+# Get baselines from memory
+BASELINES=$(kubiya memory recall "performance baselines for ${CIRCLE_PROJECT_REPONAME}" \
+  --top-k 1 --output json)
+
+kubiya exec "
+  HISTORICAL BASELINES:
+  $BASELINES
+
+  CURRENT RESULTS:
+  $(cat test-results.json)
+
+  TASK: Detect performance regressions
+
+  PHASE 1 - COMPARE:
+  For each module:
+  - Calculate current average duration
+  - Compare to baseline from memory
+  - Flag if current > 2x baseline (REGRESSION)
+  - Flag if current > 1.5x baseline (WARNING)
+  - Note if current < 0.5x baseline (IMPROVEMENT)
+
+  PHASE 2 - ALERT:
+  For any regressions detected:
+  - Identify which tests got slower
+  - Hypothesize cause (new code, more assertions, external calls)
+  - Suggest investigation steps
+
+  PHASE 3 - UPDATE BASELINES:
+  If this is a representative run (no anomalies), update baselines:
+  store_memory({
+    dataset: 'ci-performance-baselines',
+    content: 'Updated baselines after build #${CIRCLE_BUILD_NUM}',
+    metadata: {
+      repository: '${CIRCLE_PROJECT_REPONAME}',
+      modules: { ... updated values ... },
+      previous_baseline_date: '[from recalled data]',
+      updated_at: '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
+    }
+  })
+
+  OUTPUT: JSON with regression_detected, modules_affected, recommendations
+" --local --cwd . --yes
+```
+
+#### CircleCI Integration with Alerts
+```yaml
+- run:
+    name: Performance Regression Check
+    command: |
+      export PATH="$HOME/.kubiya/bin:$PATH"
+
+      RESULT=$(kubiya exec "..." --local --cwd . --yes --output json)
+
+      # Check for regressions
+      if echo "$RESULT" | jq -e '.regression_detected == true' > /dev/null; then
+        echo "⚠️ PERFORMANCE REGRESSION DETECTED"
+        echo "$RESULT" | jq '.modules_affected'
+
+        # Store regression event
+        kubiya memory store \
+          --title "Regression: Build #${CIRCLE_BUILD_NUM}" \
+          --content "Performance regression detected - see details" \
+          --dataset-id ci-performance-regressions \
+          --tags regression,${CIRCLE_BRANCH},alert
+
+        # Could fail build or just warn
+        # exit 1
+      fi
+```
+
+---
+
+## Use Case 11: Intelligent Test Prioritization
+
+### Problem Statement
+All tests run with equal priority. Critical path tests (checkout, authentication) should run first and fail fast.
+
+### Solution
+Use cognitive memory to track test criticality and historical failure rates. Prioritize tests that:
+1. Cover critical business paths
+2. Have failed recently
+3. Cover recently changed code
+
+### Implementation
+```bash
+kubiya exec "
+  TASK: Create intelligent test execution order
+
+  PHASE 1 - RECALL CONTEXT:
+  recall_memory('test criticality scores for ${CIRCLE_PROJECT_REPONAME}')
+  recall_memory('recent test failures')
+  recall_memory('test-to-file dependencies')
+
+  PHASE 2 - ANALYZE CHANGES:
+  Run: git diff HEAD~1 --name-only
+  Map changed files to affected tests
+
+  PHASE 3 - PRIORITIZE:
+  Score each test:
+  - Critical path (checkout, auth, payment): +100 points
+  - Recently failed: +50 points
+  - Covers changed code: +30 points
+  - Fast execution (<1s): +10 points
+  - Flaky history: -20 points
+
+  Sort tests by score (highest first)
+
+  PHASE 4 - EXECUTE:
+  Run tests in priority order with --bail flag
+  First failure stops execution (fail fast)
+
+  PHASE 5 - STORE:
+  Update test criticality scores based on this run:
+  store_memory({
+    dataset: 'ci-test-prioritization',
+    content: 'Test priority scores updated after build #${CIRCLE_BUILD_NUM}',
+    metadata: {
+      repository: '${CIRCLE_PROJECT_REPONAME}',
+      test_scores: { ... },
+      execution_order: [...],
+      time_to_first_failure: '[if applicable]'
+    }
+  })
+
+  OUTPUT: Prioritized test list with scores
+" --local --cwd . --yes
+```
+
+---
+
+## Use Case 12: Automated Flaky Test Quarantine
+
+### Problem Statement
+Flaky tests are manually identified and skipped, requiring developer intervention. There's no automatic quarantine system.
+
+### Solution
+Automatically quarantine tests that fail inconsistently. Track failure patterns over multiple runs and auto-skip tests that exceed a flakiness threshold.
+
+### Implementation
+
+#### Nightly Flaky Test Hunter Job
+```yaml
+jobs:
+  flaky-test-hunter:
+    docker:
+      - image: cimg/node:20.11
+    steps:
+      - checkout
+      - run: npm ci
+
+      - run:
+          name: Multi-Run Flaky Detection
+          command: |
+            export PATH="$HOME/.kubiya/bin:$PATH"
+
+            kubiya exec "
+              TASK: Deep flaky test analysis with multiple runs
+
+              PHASE 1 - EXECUTE MULTIPLE RUNS:
+              Run full test suite 5 times:
+              for i in 1..5:
+                npm test -- --json > /tmp/run-\$i.json
+
+              Track pass/fail status for each test across all runs
+
+              PHASE 2 - CALCULATE FLAKINESS:
+              For each test:
+              - Count passes and failures across 5 runs
+              - Calculate failure_rate = failures / 5
+              - If 0 < failure_rate < 1: TEST IS FLAKY
+
+              PHASE 3 - CATEGORIZE:
+              For each flaky test, analyze the code:
+              - RANDOM: Uses Math.random(), UUID generation
+              - TIMING: Uses Date, setTimeout with variables
+              - ASYNC: Race conditions, missing awaits
+              - ENVIRONMENT: process.env, locale dependencies
+              - ORDER: Depends on other tests running first
+
+              PHASE 4 - QUARANTINE:
+              For tests with failure_rate > 0.1 (>10% failure):
+              store_memory({
+                dataset: 'ci-flaky-quarantine',
+                content: '[test] quarantined - [failure_rate]% failure rate',
+                metadata: {
+                  test_file: '[path]',
+                  test_name: '[name]',
+                  failure_rate: [0-1],
+                  category: '[category]',
+                  root_cause: '[analysis]',
+                  quarantined_at: '$(date -u +%Y-%m-%dT%H:%M:%SZ)',
+                  quarantine_expires: '[30 days from now]',
+                  fix_suggestion: '[how to fix]'
+                }
+              })
+
+              OUTPUT: Quarantine report with flaky tests identified
+            " --local --cwd . --yes
+
+workflows:
+  nightly-flaky-scan:
+    triggers:
+      - schedule:
+          cron: "0 2 * * *"  # 2 AM daily
+          filters:
+            branches:
+              only: main
+    jobs:
+      - flaky-test-hunter
+```
+
+#### Auto-Skip Quarantined Tests in Regular Runs
+```bash
+# Before running tests, recall quarantine list
+QUARANTINE=$(kubiya memory recall "quarantined tests for ${CIRCLE_PROJECT_REPONAME}" \
+  --top-k 50 --output json)
+
+kubiya exec "
+  QUARANTINED TESTS:
+  $QUARANTINE
+
+  TASK: Run tests excluding quarantined ones
+
+  1. Parse the quarantine list
+  2. Generate Jest --testPathIgnorePatterns for quarantined files
+  3. Run: npm test -- --testPathIgnorePatterns='[patterns]'
+  4. Report how many tests were skipped due to quarantine
+" --local --cwd . --yes
+```
+
+---
+
+## Cognitive Memory CLI Reference
+
+### Dataset Management
+```bash
+# Create a dataset
+kubiya memory dataset create \
+  --name "ci-flaky-tests" \
+  --scope org \
+  --description "Registry of known flaky tests across organization"
+
+# List datasets
+kubiya memory dataset list
+
+# Delete a dataset
+kubiya memory dataset delete ci-test-dataset
+```
+
+### Storing Memories
+```bash
+# Store with title, content, and tags
+kubiya memory store \
+  --title "Flaky Test: random-failure.test.ts" \
+  --content "Uses Math.random() causing ~30% failure rate. Fix: mock random." \
+  --dataset-id ci-flaky-tests \
+  --tags flaky,random,high-priority
+
+# Store with structured metadata (via agent)
+kubiya exec "
+  store_memory({
+    dataset: 'ci-flaky-tests',
+    content: 'Detailed analysis...',
+    metadata: {
+      test_file: 'path/to/test.ts',
+      failure_rate: 0.3,
+      category: 'random',
+      root_cause: 'Math.random() assertion'
+    }
+  })
+" --local --cwd . --yes
+```
+
+### Recalling Memories
+```bash
+# Natural language recall
+kubiya memory recall "flaky tests with random failures" \
+  --top-k 5 \
+  --min-score 0.7 \
+  --output json
+
+# Recall within agent (more flexible)
+kubiya exec "
+  results = recall_memory('test failures in payments module')
+  # Agent can reason about results and take action
+" --local --cwd . --yes
+```
+
+### Uploading Artifacts
+```bash
+# Upload a directory of files
+kubiya memory dataset upload ci-build-logs ./logs/ \
+  --title "Build Logs Week 52" \
+  --tags logs,production
+
+# Upload specific files
+kubiya memory dataset upload ci-coverage ./coverage/lcov.info \
+  --title "Coverage Report"
+```
+
+---
+
 *This PRD is designed to be parsed by task-master for automated task generation and tracking.*

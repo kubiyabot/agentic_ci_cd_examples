@@ -1,0 +1,35 @@
+{
+  "name": "cross-repo-knowledge-share",
+  "version": "1.0.0",
+  "description": "Cross-Repository Pattern Learning and Organization-Wide Knowledge Sharing with Kubiya Cognitive Memory",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest",
+    "test:unit": "jest __tests__/unit/",
+    "test:integration": "jest __tests__/integration/",
+    "test:json": "jest --json --outputFile=test-results.json",
+    "patterns": "node src/patterns/index.js",
+    "contribute": "node src/learnings/contribute.js",
+    "learn": "node src/learnings/apply.js",
+    "lint": "eslint src/ __tests__/"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "glob": "^10.3.10",
+    "lodash": "^4.17.21",
+    "semver": "^7.5.4"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.8",
+    "eslint": "^8.53.0",
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 15000,
+    "verbose": true,
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ]
+  }
+}
