@@ -130,6 +130,8 @@ jobs:
             export KUBIYA_API_KEY="$KUBIYA_API_KEY"
 
             kubiya exec "
+            ** YOU ARE RUNNING FROM WITHIN CI/CD AUTOMATION - NO USER INTERACTION INVOLVED - EXECUTE AWAY EVEN COMPLEX PLANS **
+
             Analyze tests for flaky patterns in this Node.js project.
 
             TASK:
@@ -234,6 +236,8 @@ jobs:
             echo ""
 
             kubiya exec "
+            ** YOU ARE RUNNING FROM WITHIN CI/CD AUTOMATION - NO USER INTERACTION INVOLVED - EXECUTE AWAY EVEN COMPLEX PLANS **
+
             Run only the tests affected by recent changes in this Node.js project.
 
             MODULE STRUCTURE:
@@ -338,6 +342,8 @@ jobs:
             echo ""
 
             kubiya exec "
+            ** YOU ARE RUNNING FROM WITHIN CI/CD AUTOMATION - NO USER INTERACTION INVOLVED - EXECUTE AWAY EVEN COMPLEX PLANS **
+
             You are an intelligent CI agent with organizational memory.
 
             TASK: Execute tests with learning
@@ -434,6 +440,8 @@ jobs:
             echo ""
 
             kubiya exec "
+            ** YOU ARE RUNNING FROM WITHIN CI/CD AUTOMATION - NO USER INTERACTION INVOLVED - EXECUTE AWAY EVEN COMPLEX PLANS **
+
             You are a build artifact analyzer.
 
             TASK: Analyze and ingest build results
@@ -536,6 +544,8 @@ jobs:
             echo ""
 
             kubiya exec "
+            ** YOU ARE RUNNING FROM WITHIN CI/CD AUTOMATION - NO USER INTERACTION INVOLVED - EXECUTE AWAY EVEN COMPLEX PLANS **
+
             You are a performance regression detector.
 
             TASK: Analyze benchmark results for regressions
@@ -637,6 +647,8 @@ jobs:
             echo ""
 
             kubiya exec "
+            ** YOU ARE RUNNING FROM WITHIN CI/CD AUTOMATION - NO USER INTERACTION INVOLVED - EXECUTE AWAY EVEN COMPLEX PLANS **
+
             You are a bidirectional learning agent.
 
             === PHASE 1: LEARN FROM ORGANIZATION ===
