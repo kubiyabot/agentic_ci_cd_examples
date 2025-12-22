@@ -10,13 +10,17 @@ setup: true
 #
 # Prerequisites:
 # 1. Enable "Dynamic config using setup workflows" in Project Settings → Advanced
-# 2. Create 'kubiya-secrets' context with KUBIYA_API_KEY (and optional KUBIYA_AGENT_UUID)
+# 2. Create 'kubiya-secrets' context with KUBIYA_API_KEY
 #
 # Behavior:
-# - Changes in fleaky-tests-circleci/ → runs flaky test workflows
-# - Changes in smart-test-selection/ → runs smart selection workflows
-# - Changes in both → runs both workflows
-# - Changes in root files only → no workflows run
+# - Changes in fleaky-tests-circleci/     → runs flaky test workflows
+# - Changes in smart-test-selection/      → runs smart selection workflows
+# - Changes in incident-learning-pipeline/ → runs incident learning workflows
+# - Changes in build-artifact-analyzer/   → runs artifact analyzer workflows
+# - Changes in performance-regression-detector/ → runs perf detector workflows
+# - Changes in cross-repo-knowledge-share/ → runs cross-repo workflows
+# - Changes in multiple folders           → runs all affected workflows
+# - Changes in root files only            → no workflows run
 # =============================================================================
 
 orbs:
@@ -38,3 +42,7 @@ workflows:
           mapping: |
             fleaky-tests-circleci/.* run-flaky-tests true
             smart-test-selection/.* run-smart-selection true
+            incident-learning-pipeline/.* run-incident-learning true
+            build-artifact-analyzer/.* run-artifact-analyzer true
+            performance-regression-detector/.* run-perf-detector true
+            cross-repo-knowledge-share/.* run-cross-repo true
