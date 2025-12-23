@@ -11,6 +11,15 @@ class BuildMetricsAnalyzer {
   }
 
   analyze(currentBuild, historicalBuilds = []) {
+    // Validate input
+    if (!currentBuild || typeof currentBuild !== 'object') {
+      throw new Error('Invalid currentBuild: must be a non-null object');
+    }
+
+    if (!Array.isArray(historicalBuilds)) {
+      throw new Error('Invalid historicalBuilds: must be an array');
+    }
+
     const metrics = this.extractMetrics(currentBuild);
     const baseline = this.calculateBaseline(historicalBuilds);
     const comparison = this.compareToBaseline(metrics, baseline);

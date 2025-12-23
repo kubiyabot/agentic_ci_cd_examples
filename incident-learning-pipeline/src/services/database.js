@@ -5,6 +5,7 @@
 
 const CONNECTION_TIMEOUT = parseInt(process.env.DB_TIMEOUT) || 5000;
 const MAX_RETRIES = parseInt(process.env.DB_MAX_RETRIES) || 3;
+const SLOW_QUERY_THRESHOLD = parseInt(process.env.SLOW_QUERY_THRESHOLD) || 150;
 
 class DatabaseService {
   constructor(config = {}) {
@@ -12,6 +13,7 @@ class DatabaseService {
     this.port = config.port || process.env.DB_PORT || 5432;
     this.connected = false;
     this.connectionAttempts = 0;
+    this.logger = config.logger || console; // Allow logger injection
   }
 
   async connect() {
@@ -38,9 +40,13 @@ class DatabaseService {
     const queryTime = Math.random() * 200 + 50;
     await this.delay(queryTime);
 
-    // Simulate slow query detection
-    if (queryTime > 150) {
-      console.warn(`Slow query detected: ${queryTime.toFixed(2)}ms`);
+    // Simulate slow query detection with proper logging
+    if (queryTime > SLOW_QUERY_THRESHOLD) {
+      this.logger.warn(`Slow query detected: ${queryTime.toFixed(2)}ms`, {
+        sql: sql.substring(0, 100),
+        queryTime,
+        threshold: SLOW_QUERY_THRESHOLD
+      });
     }
 
     // Simulate deadlock (rare)

@@ -267,10 +267,16 @@ class TestFileAnalyzer:
         summary = results["summary"]
         report.append("📊 SUMMARY:")
         report.append(f"   Total test files: {summary['total_files']}")
-        report.append(f"   ✅ Stable:       {summary['stable']} ({summary['stable']/summary['total_files']*100:.1f}%)")
-        report.append(f"   ⚠️  Flaky:        {summary['flaky']} ({summary['flaky']/summary['total_files']*100:.1f}%)")
-        report.append(f"   📅 Outdated:     {summary['outdated']} ({summary['outdated']/summary['total_files']*100:.1f}%)")
-        report.append(f"   ❓ Unknown:      {summary['unknown']} ({summary['unknown']/summary['total_files']*100:.1f}%)")
+
+        # Avoid division by zero
+        total = summary['total_files']
+        if total > 0:
+            report.append(f"   ✅ Stable:       {summary['stable']} ({summary['stable']/total*100:.1f}%)")
+            report.append(f"   ⚠️  Flaky:        {summary['flaky']} ({summary['flaky']/total*100:.1f}%)")
+            report.append(f"   📅 Outdated:     {summary['outdated']} ({summary['outdated']/total*100:.1f}%)")
+            report.append(f"   ❓ Unknown:      {summary['unknown']} ({summary['unknown']/total*100:.1f}%)")
+        else:
+            report.append("   No test files found to analyze.")
         report.append("")
         
         # Detailed breakdown by category

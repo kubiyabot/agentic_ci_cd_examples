@@ -14,8 +14,9 @@ class CoverageAnalyzer {
   }
 
   analyze(coverageData) {
-    if (!coverageData) {
-      throw new Error('No coverage data provided');
+    // Validate input
+    if (!coverageData || typeof coverageData !== 'object') {
+      throw new Error('No coverage data provided or invalid format: must be a non-null object');
     }
 
     const summary = this.extractSummary(coverageData);

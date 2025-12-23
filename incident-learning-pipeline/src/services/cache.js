@@ -4,11 +4,13 @@
  */
 
 const CACHE_TTL = parseInt(process.env.CACHE_TTL) || 3600;
+const MAX_CACHE_SIZE = parseInt(process.env.MAX_CACHE_SIZE) || 10000;
 
 class CacheService {
   constructor(config = {}) {
     this.host = config.host || process.env.REDIS_HOST || 'localhost';
     this.port = config.port || process.env.REDIS_PORT || 6379;
+    this.maxSize = config.maxSize || MAX_CACHE_SIZE;
     this.connected = false;
     this.store = new Map();
     this.hitCount = 0;
@@ -54,6 +56,13 @@ class CacheService {
     this.ensureConnected();
 
     await this.delay(10);
+
+    // Enforce maximum cache size to prevent memory leaks
+    if (this.store.size >= this.maxSize && !this.store.has(key)) {
+      // Evict oldest entry (LRU-like behavior)
+      const firstKey = this.store.keys().next().value;
+      this.store.delete(firstKey);
+    }
 
     // Simulate memory pressure errors
     if (this.store.size > 1000 && Math.random() < 0.1) {

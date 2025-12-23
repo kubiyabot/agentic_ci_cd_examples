@@ -13,8 +13,13 @@ class TestResultsAnalyzer {
   }
 
   analyze(jestResults) {
-    if (!jestResults || !jestResults.testResults) {
-      throw new Error('Invalid Jest results format');
+    // Validate input structure
+    if (!jestResults || typeof jestResults !== 'object') {
+      throw new Error('Invalid Jest results format: must be a non-null object');
+    }
+
+    if (!jestResults.testResults || !Array.isArray(jestResults.testResults)) {
+      throw new Error('Invalid Jest results format: testResults must be an array');
     }
 
     const summary = this.extractSummary(jestResults);
