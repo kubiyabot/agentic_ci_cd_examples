@@ -1,0 +1,19 @@
+# Flaky tests should be ignored by git
+node_modules/
+coverage/
+test-results/
+*.log
+.DS_Store
+.env
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# TeamCity
+.teamcity/target/
+
+# Jenkins
+jenkins_home/

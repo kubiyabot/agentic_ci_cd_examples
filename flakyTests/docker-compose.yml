@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # Jenkins for comparison
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins-flaky-demo
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - JENKINS_OPTS=--prefix=/jenkins
+    networks:
+      - demo-network
+
+  # If you want to run TeamCity locally instead of using Cloud
+  teamcity-server:
+    image: jetbrains/teamcity-server:latest
+    container_name: teamcity-server-demo
+    ports:
+      - "8111:8111"
+    volumes:
+      - teamcity_data:/data/teamcity_server/datadir
+      - teamcity_logs:/opt/teamcity/logs
+    networks:
+      - demo-network
+
+  teamcity-agent:
+    image: jetbrains/teamcity-agent:latest
+    container_name: teamcity-agent-demo
+    environment:
+      - SERVER_URL=http://teamcity-server:8111
+      - AGENT_NAME=LocalAgent
+    volumes:
+      - agent_config:/data/teamcity_agent/conf
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - demo-network
+    depends_on:
+      - teamcity-server
+
+volumes:
+  jenkins_data:
+  teamcity_data:
+  teamcity_logs:
+  agent_config:
+
+networks:
+  demo-network:
+    driver: bridge
+
+# Quick Start Commands:
+# 
+# 1. Start everything:
+#    docker-compose up -d
+#
+# 2. Get Jenkins initial password:
+#    docker-compose exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+#
+# 3. Access:
+#    - Jenkins: http://localhost:8080
+#    - TeamCity: http://localhost:8111
+#
+# 4. Stop everything:
+#    docker-compose down
+#
+# 5. Clean up everything:
+#    docker-compose down -v
