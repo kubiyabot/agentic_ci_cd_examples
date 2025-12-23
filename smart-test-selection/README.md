@@ -266,3 +266,5 @@ git log --oneline -3
 - Try [Flaky Test Detection](../fleaky-tests-circleci/) to skip unreliable tests
 - Combine both: smart selection + flaky detection
 - Check the [main README](../README.md) for more examples
+
+<!-- CI trigger: 1766363472 -->

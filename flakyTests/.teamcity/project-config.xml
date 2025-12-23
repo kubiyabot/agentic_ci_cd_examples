@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://www.teamcity.com/schemas/teamcity-project-v1.xsd">
+  <name>Flaky Test Demo</name>
+  <description>Demonstrates TeamCity's intelligent flaky test detection</description>
+  
+  <parameters>
+    <param name="env.NODE_VERSION" value="18" />
+    <param name="teamcity.tests.runRiskGroupTestsFirst" value="true" />
+  </parameters>
+  
+  <build-type id="FlakyTestDemo_Build">
+    <name>Run Tests with Flaky Detection</name>
+    <description>Executes test suite to demonstrate flaky test identification</description>
+    
+    <settings>
+      <options>
+        <option name="buildNumberPattern" value="%build.counter%" />
+        <option name="executionTimeoutMin" value="10" />
+      </options>
+      
+      <build-runners>
+        <runner id="RUNNER_1" name="Install Dependencies" type="nodejs">
+          <parameters>
+            <param name="command" value="install" />
+          </parameters>
+        </runner>
+        
+        <runner id="RUNNER_2" name="Run Tests" type="nodejs">
+          <parameters>
+            <param name="command" value="run test:junit" />
+          </parameters>
+        </runner>
+      </build-runners>
+      
+      <build-features>
+        <feature type="xml-report-plugin">
+          <parameters>
+            <param name="xmlReportParsing.reportType" value="junit" />
+            <param name="xmlReportParsing.reportDirs" value="+:test-results/*.xml" />
+            <param name="xmlReportParsing.verboseOutput" value="true" />
+          </parameters>
+        </feature>
+        
+        <feature type="investigationsAutoAssigner">
+          <parameters>
+            <param name="assignOnFirstFailure" value="true" />
+            <param name="assignOnSecondFailure" value="false" />
+            <param name="defaultAssignee" value="committer" />
+          </parameters>
+        </feature>
+        
+        <feature type="testMuting">
+          <parameters>
+            <param name="rules" value="
+              # Automatically mute tests that fail intermittently
+              # but not consistently (flaky tests)
+              test.flakinessRate > 0.2 AND test.flakinessRate < 0.8
+            " />
+          </parameters>
+        </feature>
+      </build-features>
+      
+      <failure-conditions>
+        <failure-condition type="failedTests">
+          <parameters>
+            <param name="testFailureCondition.conditionType" value="newFailure" />
+            <param name="testFailureCondition.ignoreFlaky" value="true" />
+          </parameters>
+        </failure-condition>
+      </failure-conditions>
+      
+      <requirements />
+    </settings>
+    
+    <vcs-settings>
+      <vcs-entry-ref root-id="FlakyTestDemo_Git" />
+    </vcs-settings>
+  </build-type>
+  
+  <vcs-root id="FlakyTestDemo_Git" type="git">
+    <name>Flaky Test Demo Repository</name>
+    <parameters>
+      <param name="url" value="https://github.com/YOUR_USERNAME/flaky-test-demo.git" />
+      <param name="branch" value="refs/heads/main" />
+      <param name="authMethod" value="ANONYMOUS" />
+    </parameters>
+  </vcs-root>
+</project>

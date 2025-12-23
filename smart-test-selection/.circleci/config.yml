@@ -13,14 +13,9 @@ version: 2.1
 #
 # Required Environment Variables (set in CircleCI context 'kubiya-secrets'):
 #   - KUBIYA_API_KEY: Your Kubiya API key
-#   - KUBIYA_AGENT_UUID: Agent UUID for direct execution (no planning)
-#
-# Note: For local testing, use the Makefile targets instead of circleci local execute
-#       (circleci local execute has issues with environment variable handling)
 #
 # Local testing:
-#   make test-smart-kubiya        # With planning
-#   make test-smart-kubiya-direct # Direct agent execution
+#   make test-smart-kubiya
 # =============================================================================
 
 jobs:
@@ -69,14 +64,11 @@ jobs:
 
   # ==========================================================================
   # INTELLIGENT APPROACH: Kubiya analyzes changes and runs only relevant tests
-  # Uses direct agent execution (no planning phase) for faster CI/CD
   # ==========================================================================
   test-intelligent:
     docker:
       - image: cimg/node:20.11
     environment:
-      KUBIYA_API_KEY: ${KUBIYA_API_KEY}
-      KUBIYA_AGENT_UUID: ${KUBIYA_AGENT_UUID}
       KUBIYA_NON_INTERACTIVE: "true"
     steps:
       - run:
@@ -121,16 +113,10 @@ jobs:
             cd repo/smart-test-selection
 
             echo "=== KUBIYA INTELLIGENT TEST SELECTION ==="
-            echo "Using direct agent: ${KUBIYA_AGENT_UUID}"
             echo ""
 
-            kubiya exec agent ${KUBIYA_AGENT_UUID} "
+            kubiya exec "
             You are an intelligent CI/CD agent that runs only relevant tests.
-
-            CONTEXT:
-            - Repository: smart-test-selection
-            - Working directory: $(pwd)
-            - This is a modular Node.js app with independent modules
 
             MODULE STRUCTURE:
             - src/tasks/ → npm run test:tasks (13 tests)

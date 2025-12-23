@@ -1,0 +1,288 @@
+version: 2.1
+
+# =============================================================================
+# Kubiya Intelligent CI/CD Pipeline - Flaky Test Analysis & Auto-Fix
+# =============================================================================
+#
+# This pipeline demonstrates intelligent test analysis with autonomous PR creation:
+# 1. Detects and analyzes flaky test patterns
+# 2. Generates comprehensive analysis and fixes
+# 3. Creates a new branch with improvements
+# 4. Pushes changes to remote
+# 5. Creates a pull request with detailed documentation
+#
+# Required Environment Variables (set in CircleCI context 'kubiya-secrets'):
+#   - KUBIYA_API_KEY: Your Kubiya API key
+#   - GITHUB_TOKEN: GitHub personal access token for PR creation
+#
+# =============================================================================
+
+jobs:
+  # ==========================================================================
+  # BASELINE: Run tests without Kubiya (for comparison)
+  # ==========================================================================
+  test-baseline:
+    docker:
+      - image: cimg/node:20.11
+    working_directory: ~/project
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-flaky-deps-{{ checksum "package.json" }}
+            - v1-flaky-deps-
+
+      - run:
+          name: Install Dependencies
+          command: |
+            if [ -f package-lock.json ]; then
+              npm ci
+            else
+              npm install
+            fi
+
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-flaky-deps-{{ checksum "package.json" }}
+
+      - run:
+          name: Run All Tests (Baseline)
+          command: |
+            echo "=== BASELINE: Running ALL tests ==="
+            echo "This includes flaky tests that may fail randomly"
+            echo ""
+            npm run test:ci || true
+            echo ""
+            echo "Note: Some tests may have failed due to flakiness"
+
+      - store_test_results:
+          path: coverage
+
+      - store_artifacts:
+          path: coverage
+
+  # ==========================================================================
+  # INTELLIGENT APPROACH: Kubiya analyzes, fixes, and creates PR
+  # ==========================================================================
+  intelligent-flaky-test-analysis:
+    docker:
+      - image: cimg/node:20.11
+    working_directory: ~/project
+    environment:
+      KUBIYA_NON_INTERACTIVE: "true"
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-flaky-deps-{{ checksum "package.json" }}
+            - v1-flaky-deps-
+
+      - run:
+          name: Install Dependencies
+          command: |
+            if [ -f package-lock.json ]; then
+              npm ci
+            else
+              npm install
+            fi
+
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-flaky-deps-{{ checksum "package.json" }}
+
+      - run:
+          name: Install Kubiya CLI
+          command: |
+            curl -fsSL https://raw.githubusercontent.com/kubiyabot/cli/main/install.sh | bash
+            echo 'export PATH="$HOME/.kubiya/bin:$PATH"' >> $BASH_ENV
+            source $BASH_ENV
+
+      - run:
+          name: Configure Git for PR Creation
+          command: |
+            git config --global user.email "kubiya-bot@kubiya.ai"
+            git config --global user.name "Kubiya Bot"
+
+      - run:
+          name: Intelligent Flaky Test Analysis & PR Creation
+          command: |
+            echo "=== KUBIYA INTELLIGENT FLAKY TEST ANALYSIS & AUTO-FIX ==="
+            echo ""
+            echo "Repository: ${CIRCLE_PROJECT_REPONAME}"
+            echo "Branch: ${CIRCLE_BRANCH}"
+            echo "Build: ${CIRCLE_BUILD_NUM}"
+            echo "Commit: ${CIRCLE_SHA1}"
+            echo ""
+
+            kubiya exec --local "
+            CONTEXT:
+            - Repository: ${CIRCLE_PROJECT_REPONAME}
+            - Repository URL: ${CIRCLE_REPOSITORY_URL}
+            - Current Branch: ${CIRCLE_BRANCH}
+            - Target Branch: ${CIRCLE_BRANCH}
+            - Build Number: ${CIRCLE_BUILD_NUM}
+            - Build URL: ${CIRCLE_BUILD_URL}
+            - Commit SHA: ${CIRCLE_SHA1}
+            - Commit Author: ${CIRCLE_USERNAME}
+            - Job Name: ${CIRCLE_JOB}
+            - Workflow ID: ${CIRCLE_WORKFLOW_ID}
+            - Project: ${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
+
+            TASK:
+            Scan the current working directory for flaky test patterns. Use your memory tools to store such patterns and obviously search for past ones for the codebase.
+
+            Come up with a proper suggested branch with fixes for those tests/code!
+
+            Create a detailed PR with diagrams (mermaid) markdown in the body with all of the suggested changes, and your flow of understanding (how you got to it).
+
+            Use the context information above to properly name the branch, reference the build number, and provide full context in the PR description.
+            " --cwd . --yes
+
+            echo ""
+            echo "=== Kubiya execution complete ==="
+
+      - store_test_results:
+          path: coverage
+
+      - store_artifacts:
+          path: coverage
+
+      - store_artifacts:
+          path: FLAKY_TEST_ANALYSIS.md
+
+  # ==========================================================================
+  # MINIMAL APPROACH: Just analysis without PR (for testing)
+  # ==========================================================================
+  analyze-only:
+    docker:
+      - image: cimg/node:20.11
+    working_directory: ~/project
+    environment:
+      KUBIYA_NON_INTERACTIVE: "true"
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-flaky-deps-{{ checksum "package.json" }}
+            - v1-flaky-deps-
+
+      - run:
+          name: Install Dependencies
+          command: |
+            if [ -f package-lock.json ]; then
+              npm ci
+            else
+              npm install
+            fi
+
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-flaky-deps-{{ checksum "package.json" }}
+
+      - run:
+          name: Install Kubiya CLI
+          command: |
+            curl -fsSL https://raw.githubusercontent.com/kubiyabot/cli/main/install.sh | bash
+            echo 'export PATH="$HOME/.kubiya/bin:$PATH"' >> $BASH_ENV
+            source $BASH_ENV
+
+      - run:
+          name: Analyze Flaky Tests
+          command: |
+            echo "=== KUBIYA FLAKY TEST ANALYSIS ==="
+            echo ""
+
+            kubiya exec "
+            You are an intelligent CI/CD agent analyzing tests for flaky patterns.
+
+            TASK: Analyze and report on flaky test patterns
+
+            STEP 1 - Analyze test directory:
+            - List all test files in tests/ directory
+            - For each test file, identify flaky patterns:
+              * Math.random() usage
+              * new Date() or time-based logic
+              * setTimeout/setInterval with variable delays
+              * Network calls without mocks
+              * Race conditions
+
+            STEP 2 - Run tests:
+            - Execute: npm run test:ci
+            - Capture which tests fail
+
+            STEP 3 - Generate report:
+            - Create FLAKY_TEST_ANALYSIS.md with:
+              * Summary of all flaky tests found
+              * Root cause for each
+              * Recommended fixes
+              * Priority ranking
+
+            STEP 4 - Summary:
+            - Report total flaky tests found
+            - List most critical issues
+            - Provide high-level recommendations
+            " --local --cwd . --yes
+
+            echo ""
+            echo "=== Analysis complete ==="
+
+      - store_artifacts:
+          path: FLAKY_TEST_ANALYSIS.md
+
+# =============================================================================
+# Workflow Definitions
+# =============================================================================
+workflows:
+  version: 2
+
+  # Baseline workflow - no intelligence
+  baseline-testing:
+    jobs:
+      - test-baseline:
+          filters:
+            branches:
+              only:
+                - baseline
+
+  # Analysis only (no PR creation) - for testing
+  analysis-workflow:
+    jobs:
+      - analyze-only:
+          context:
+            - kubiya-secrets
+          filters:
+            branches:
+              only:
+                - analyze-only
+
+  # Full intelligent workflow with PR creation (default)
+  intelligent-workflow:
+    jobs:
+      - intelligent-flaky-test-analysis:
+          context:
+            - kubiya-secrets
+          filters:
+            branches:
+              ignore:
+                - baseline
+                - analyze-only
+
+  # Manual trigger for comparison
+  compare-approaches:
+    jobs:
+      - test-baseline:
+          name: "Baseline: Standard Testing"
+      - analyze-only:
+          name: "Analysis: Flaky Detection"
+          context:
+            - kubiya-secrets
+      - intelligent-flaky-test-analysis:
+          name: "Full: Analysis + Auto-Fix + PR"
+          context:
+            - kubiya-secrets

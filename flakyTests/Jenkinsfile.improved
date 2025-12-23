@@ -1,0 +1,312 @@
+pipeline {
+    agent any
+
+    parameters {
+        booleanParam(name: 'RUN_FLAKY_TESTS', defaultValue: false, description: 'Include flaky tests in the run')
+        choice(name: 'TEST_MODE', choices: ['stable', 'all', 'flaky-only'], description: 'Test execution mode')
+    }
+
+    environment {
+        NODE_ENV = 'test'
+        LOG_LEVEL = 'error'
+    }
+
+    tools {
+        nodejs 'NodeJS-18'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                script {
+                    env.BUILD_TIMESTAMP = new Date().format('yyyy-MM-dd HH:mm:ss')
+                }
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm ci' // Use ci for faster, reliable installs
+            }
+        }
+
+        stage('Pre-Test Analysis') {
+            steps {
+                script {
+                    // Basic flaky test detection setup
+                    sh '''
+                        mkdir -p test-results-history
+                        if [ -f test-results-history/flaky-detection.json ]; then
+                            echo "📊 Previous test history found"
+                            cat test-results-history/flaky-detection.json | jq '.[] | select(.isFlaky == true) | .test' || echo "No flaky tests in history"
+                        else
+                            echo "🚀 First run - establishing test baseline"
+                        fi
+                    '''
+                }
+            }
+        }
+
+        stage('Run Stable Tests') {
+            steps {
+                script {
+                    try {
+                        // Run only reliable tests first
+                        sh '''
+                            npm test -- --testPathPattern="(stable|fixed)" \
+                                       --json \
+                                       --outputFile=test-results/stable-results.json \
+                                       --passWithNoTests
+                        '''
+                    } catch (Exception e) {
+                        echo "❌ Stable tests failed - this indicates genuine issues"
+                        currentBuild.result = 'FAILURE'
+                        throw e
+                    }
+                }
+            }
+        }
+
+        stage('Run Potentially Flaky Tests') {
+            when {
+                anyOf {
+                    expression { params.TEST_MODE == 'all' }
+                    expression { params.TEST_MODE == 'flaky-only' }
+                    expression { params.RUN_FLAKY_TESTS }
+                }
+            }
+            steps {
+                script {
+                    def flakyTestResults = [:]
+                    def maxRetries = 3
+
+                    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+                        echo "🔄 Running flaky tests - Attempt ${attempt}/${maxRetries}"
+
+                        try {
+                            sh '''
+                                npm test -- --testPathPattern="flaky-tests\\.test\\.js" \
+                                           --json \
+                                           --outputFile="test-results/flaky-attempt-${BUILD_NUMBER}-${attempt}.json" \
+                                           --passWithNoTests
+                            '''
+
+                            flakyTestResults[attempt] = 'PASS'
+                            echo "✅ Attempt ${attempt} passed"
+                        } catch (Exception e) {
+                            flakyTestResults[attempt] = 'FAIL'
+                            echo "❌ Attempt ${attempt} failed"
+
+                            if (attempt == maxRetries) {
+                                echo "⚠️ Flaky tests failed all ${maxRetries} attempts"
+                                // Don't fail the build for flaky tests
+                                currentBuild.result = 'UNSTABLE'
+                            }
+                        }
+                    }
+
+                    // Analyze flaky test patterns
+                    def passCount = flakyTestResults.count { it.value == 'PASS' }
+                    def failCount = flakyTestResults.count { it.value == 'FAIL' }
+
+                    echo """
+                    📈 Flaky Test Analysis:
+                    - Passed: ${passCount}/${maxRetries} attempts
+                    - Failed: ${failCount}/${maxRetries} attempts
+                    - Flakiness Rate: ${(failCount * 100 / maxRetries).round(1)}%
+                    """
+
+                    if (passCount > 0 && failCount > 0) {
+                        echo "🔄 FLAKY BEHAVIOR DETECTED - Tests show inconsistent results"
+                        currentBuild.description = "Build passed with flaky test behavior detected"
+                    }
+                }
+            }
+        }
+
+        stage('Flaky Test Detection Analysis') {
+            steps {
+                script {
+                    sh '''
+                        echo "🔍 Analyzing test patterns..."
+
+                        # Basic flaky test analysis (requires jq)
+                        if command -v jq &> /dev/null; then
+                            echo "Running flaky test analysis..."
+
+                            # Count test results across multiple runs
+                            if ls test-results/flaky-attempt-*.json >/dev/null 2>&1; then
+                                echo "Found flaky test results, analyzing patterns..."
+
+                                # Simple analysis script
+                                node -e "
+                                    const fs = require('fs');
+                                    const files = fs.readdirSync('test-results/').filter(f => f.includes('flaky-attempt'));
+                                    const results = files.map(f => JSON.parse(fs.readFileSync(\`test-results/\${f}\`, 'utf8')));
+
+                                    console.log('📊 Test Result Summary:');
+                                    console.log('Total test runs:', results.length);
+                                    console.log('Successful runs:', results.filter(r => r.success).length);
+                                    console.log('Failed runs:', results.filter(r => !r.success).length);
+
+                                    if (results.length > 1) {
+                                        const inconsistent = results.filter(r => r.success).length > 0 &&
+                                                           results.filter(r => !r.success).length > 0;
+                                        if (inconsistent) {
+                                            console.log('🔄 FLAKY BEHAVIOR CONFIRMED: Inconsistent results detected');
+                                        }
+                                    }
+                                " || echo "Analysis script failed"
+                            else
+                                echo "No flaky test results to analyze"
+                            fi
+                        else
+                            echo "⚠️ jq not available - install for detailed analysis"
+                        fi
+
+                        # Generate simple HTML report
+                        cat > test-results/flaky-report.html << 'EOF'
+<!DOCTYPE html>
+<html><head><title>Flaky Test Report</title></head><body>
+<h1>Jenkins Flaky Test Detection Report</h1>
+<p><strong>Build:</strong> ${BUILD_NUMBER}</p>
+<p><strong>Timestamp:</strong> ${BUILD_TIMESTAMP}</p>
+<h2>Limitations of Jenkins Approach:</h2>
+<ul>
+    <li>❌ No built-in flaky test identification</li>
+    <li>❌ Requires custom scripting for basic analysis</li>
+    <li>❌ No historical trend analysis</li>
+    <li>❌ Manual threshold configuration needed</li>
+    <li>❌ No intelligent retry logic</li>
+</ul>
+<h2>Recommendations:</h2>
+<ul>
+    <li>✅ Switch to TeamCity for built-in flaky test intelligence</li>
+    <li>✅ Use provided fixed test implementations</li>
+    <li>✅ Implement proper test isolation and mocking</li>
+</ul>
+</body></html>
+EOF
+                    '''
+                }
+            }
+        }
+
+        stage('Publish Test Results') {
+            steps {
+                // Publish test results
+                publishTestResults testResultsPattern: 'test-results/*.xml'
+
+                // Publish HTML reports
+                publishHTML([
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: 'test-results',
+                    reportFiles: 'flaky-report.html',
+                    reportName: 'Flaky Test Analysis Report'
+                ])
+
+                // Archive artifacts
+                archiveArtifacts artifacts: 'test-results/**/*', allowEmptyArchive: true
+            }
+        }
+    }
+
+    post {
+        always {
+            script {
+                def status = currentBuild.result ?: 'SUCCESS'
+                echo """
+                🏁 Build Complete: ${status}
+                =====================================
+
+                Build Number: ${BUILD_NUMBER}
+                Timestamp: ${BUILD_TIMESTAMP}
+                Status: ${status}
+                """
+
+                if (status == 'UNSTABLE') {
+                    echo """
+                    ⚠️  UNSTABLE BUILD DETECTED
+
+                    This typically indicates flaky test behavior.
+                    Jenkins limitations in handling flaky tests:
+
+                    1. No automatic flaky test detection
+                    2. Requires manual analysis of test patterns
+                    3. No built-in retry intelligence
+                    4. Limited historical analysis capabilities
+
+                    Consider upgrading to TeamCity for:
+                    ✅ Automatic flaky test identification
+                    ✅ Intelligent retry mechanisms
+                    ✅ Built-in test intelligence features
+                    """
+                }
+            }
+        }
+
+        success {
+            echo "✅ Build succeeded - All tests passed consistently"
+        }
+
+        unstable {
+            echo "⚠️ Build unstable - Flaky test behavior detected"
+            emailext (
+                to: "${env.CHANGE_AUTHOR_EMAIL}",
+                subject: "⚠️ Flaky Tests Detected in Build ${BUILD_NUMBER}",
+                body: """
+                Build ${BUILD_NUMBER} completed with unstable status due to flaky test behavior.
+
+                Please review:
+                - Flaky Test Analysis Report: ${BUILD_URL}Flaky_Test_Analysis_Report/
+                - Test Results: ${BUILD_URL}testReport/
+                - FLAKY_TEST_ANALYSIS.md for detailed remediation steps
+
+                Consider using the fixed test implementations in tests/fixed-flaky-tests.test.js
+                """
+            )
+        }
+
+        failure {
+            echo "❌ Build failed - Check for genuine test failures vs flaky behavior"
+        }
+
+        cleanup {
+            // Clean up temporary files but keep history
+            sh '''
+                find test-results/ -name "flaky-attempt-*.json" -mtime +7 -delete 2>/dev/null || true
+            '''
+        }
+    }
+}
+
+/*
+ * JENKINS FLAKY TEST HANDLING - ENHANCED VERSION
+ *
+ * Improvements in this pipeline:
+ * ✅ Separate stable vs potentially flaky test execution
+ * ✅ Multiple retry attempts with result tracking
+ * ✅ Basic flaky test detection and reporting
+ * ✅ Build status differentiation (stable tests must pass)
+ * ✅ Simple HTML reporting
+ * ✅ Email notifications for unstable builds
+ *
+ * Still missing compared to TeamCity:
+ * ❌ Automatic test categorization
+ * ❌ Historical trend analysis
+ * ❌ Intelligent retry (only retries failing tests)
+ * ❌ Built-in flaky test muting
+ * ❌ Statistical analysis of test behavior
+ * ❌ Visual test intelligence dashboards
+ * ❌ Automatic investigation assignment
+ *
+ * Setup Requirements:
+ * - NodeJS plugin
+ * - HTML Publisher plugin
+ * - Email Extension plugin
+ * - jq installed on build agents
+ * - Custom scripts for detailed analysis
+ */

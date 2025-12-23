@@ -13,14 +13,9 @@ version: 2.1
 #
 # Required Environment Variables (set in CircleCI context 'kubiya-secrets'):
 #   - KUBIYA_API_KEY: Your Kubiya API key
-#   - KUBIYA_AGENT_UUID: Agent UUID for direct execution (no planning)
-#
-# Note: For local testing, use the Makefile targets instead of circleci local execute
-#       (circleci local execute has issues with environment variable handling)
 #
 # Local testing:
-#   make test-flaky-kubiya        # With planning
-#   make test-flaky-kubiya-direct # Direct agent execution
+#   make test-flaky-kubiya
 # =============================================================================
 
 jobs:
@@ -115,22 +110,10 @@ jobs:
             cd repo/fleaky-tests-circleci
 
             echo "=== KUBIYA INTELLIGENT TEST EXECUTION ==="
-            echo "Using direct agent execution (no planning phase)"
             echo ""
 
-            # Set credentials from env vars (use KB_KEY/KB_AGENT for local, KUBIYA_* for real CI)
-            export KUBIYA_API_KEY="${KB_KEY:-$KUBIYA_API_KEY}"
-            AGENT_UUID="${KB_AGENT:-$KUBIYA_AGENT_UUID}"
-
-            echo "Agent UUID: ${AGENT_UUID:0:8}..."
-
-            kubiya exec agent "${AGENT_UUID}" "
+            kubiya exec "
             You are an intelligent CI/CD agent analyzing tests for flaky patterns.
-
-            CONTEXT:
-            - Repository: fleaky-tests-circleci
-            - Working directory: $(pwd)
-            - This is a demo repo with intentionally flaky tests
 
             TASK: Analyze and run tests intelligently
 

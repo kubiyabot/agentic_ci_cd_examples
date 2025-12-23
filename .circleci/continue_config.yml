@@ -10,6 +10,10 @@ version: 2.1
 # Workflows:
 # - flaky-test-detection: Runs when fleaky-tests-circleci/ changes
 # - smart-test-selection: Runs when smart-test-selection/ changes
+# - incident-learning: Runs when incident-learning-pipeline/ changes
+# - artifact-analyzer: Runs when build-artifact-analyzer/ changes
+# - perf-detector: Runs when performance-regression-detector/ changes
+# - cross-repo: Runs when cross-repo-knowledge-share/ changes
 # =============================================================================
 
 parameters:
@@ -17,6 +21,18 @@ parameters:
     type: boolean
     default: false
   run-smart-selection:
+    type: boolean
+    default: false
+  run-incident-learning:
+    type: boolean
+    default: false
+  run-artifact-analyzer:
+    type: boolean
+    default: false
+  run-perf-detector:
+    type: boolean
+    default: false
+  run-cross-repo:
     type: boolean
     default: false
 
@@ -114,6 +130,8 @@ jobs:
             export KUBIYA_API_KEY="$KUBIYA_API_KEY"
 
             kubiya exec "
+            ** YOU ARE RUNNING FROM WITHIN CI/CD AUTOMATION - NO USER INTERACTION INVOLVED - EXECUTE AWAY EVEN COMPLEX PLANS **
+
             Analyze tests for flaky patterns in this Node.js project.
 
             TASK:
@@ -218,6 +236,8 @@ jobs:
             echo ""
 
             kubiya exec "
+            ** YOU ARE RUNNING FROM WITHIN CI/CD AUTOMATION - NO USER INTERACTION INVOLVED - EXECUTE AWAY EVEN COMPLEX PLANS **
+
             Run only the tests affected by recent changes in this Node.js project.
 
             MODULE STRUCTURE:
@@ -251,6 +271,425 @@ jobs:
       - store_test_results:
           path: smart-test-selection/coverage
 
+  # ---------------------------------------------------------------------------
+  # Incident Learning Pipeline Jobs
+  # ---------------------------------------------------------------------------
+
+  test-incident-baseline:
+    docker:
+      - image: cimg/node:20.11
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-incident-deps-{{ checksum "incident-learning-pipeline/package.json" }}
+            - v1-incident-deps-
+
+      - run:
+          name: Install Dependencies
+          command: cd incident-learning-pipeline && npm ci
+
+      - save_cache:
+          paths:
+            - incident-learning-pipeline/node_modules
+          key: v1-incident-deps-{{ checksum "incident-learning-pipeline/package.json" }}
+
+      - run:
+          name: Run All Tests (Baseline)
+          command: |
+            cd incident-learning-pipeline
+            echo "=== BASELINE: Running ALL tests ==="
+            npm test || true
+
+      - store_test_results:
+          path: incident-learning-pipeline/coverage
+
+  test-incident-kubiya:
+    docker:
+      - image: cimg/python:3.11-node
+    environment:
+      KUBIYA_NON_INTERACTIVE: "true"
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-incident-deps-{{ checksum "incident-learning-pipeline/package.json" }}
+            - v1-incident-deps-
+
+      - run:
+          name: Install Dependencies
+          command: cd incident-learning-pipeline && npm ci
+
+      - save_cache:
+          paths:
+            - incident-learning-pipeline/node_modules
+          key: v1-incident-deps-{{ checksum "incident-learning-pipeline/package.json" }}
+
+      - run:
+          name: Install Kubiya CLI
+          command: |
+            curl -fsSL https://raw.githubusercontent.com/kubiyabot/cli/main/install.sh | bash
+            echo 'export PATH="$HOME/.kubiya/bin:$PATH"' >> $BASH_ENV
+
+      - run:
+          name: Intelligent Test Execution with Learning
+          command: |
+            cd incident-learning-pipeline
+
+            echo "=== KUBIYA INCIDENT LEARNING PIPELINE ==="
+            echo ""
+
+            kubiya exec "
+            ** YOU ARE RUNNING FROM WITHIN CI/CD AUTOMATION - NO USER INTERACTION INVOLVED - EXECUTE AWAY EVEN COMPLEX PLANS **
+
+            You are an intelligent CI agent with organizational memory.
+
+            TASK: Execute tests with learning
+
+            1. RECALL: Check organizational memory for previous test failures and workarounds for this repository
+
+            2. PREPARE: Based on recalled knowledge, identify any known issues that might affect this run
+
+            3. EXECUTE: Run the tests with: npm test -- --json --outputFile=test-results.json
+
+            4. ANALYZE: Analyze which tests passed/failed and any patterns
+
+            5. LEARN: If you discover NEW insights (failures, patterns, workarounds), store them to memory for future runs
+
+            6. REPORT: Summarize tests executed, learnings applied, and new insights stored
+            " --local --cwd . --yes
+
+            echo ""
+            echo "=== Kubiya execution complete ==="
+
+      - store_test_results:
+          path: incident-learning-pipeline/coverage
+
+  # ---------------------------------------------------------------------------
+  # Build Artifact Analyzer Jobs
+  # ---------------------------------------------------------------------------
+
+  test-artifact-baseline:
+    docker:
+      - image: cimg/node:20.11
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-artifact-deps-{{ checksum "build-artifact-analyzer/package.json" }}
+            - v1-artifact-deps-
+
+      - run:
+          name: Install Dependencies
+          command: cd build-artifact-analyzer && npm ci
+
+      - save_cache:
+          paths:
+            - build-artifact-analyzer/node_modules
+          key: v1-artifact-deps-{{ checksum "build-artifact-analyzer/package.json" }}
+
+      - run:
+          name: Run Tests with Coverage (Baseline)
+          command: |
+            cd build-artifact-analyzer
+            echo "=== BASELINE: Running tests with coverage ==="
+            npm run test:coverage || true
+
+      - store_test_results:
+          path: build-artifact-analyzer/artifacts/coverage
+      - store_artifacts:
+          path: build-artifact-analyzer/artifacts
+
+  test-artifact-kubiya:
+    docker:
+      - image: cimg/python:3.11-node
+    environment:
+      KUBIYA_NON_INTERACTIVE: "true"
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-artifact-deps-{{ checksum "build-artifact-analyzer/package.json" }}
+            - v1-artifact-deps-
+
+      - run:
+          name: Install Dependencies
+          command: cd build-artifact-analyzer && npm ci
+
+      - save_cache:
+          paths:
+            - build-artifact-analyzer/node_modules
+          key: v1-artifact-deps-{{ checksum "build-artifact-analyzer/package.json" }}
+
+      - run:
+          name: Install Kubiya CLI
+          command: |
+            curl -fsSL https://raw.githubusercontent.com/kubiyabot/cli/main/install.sh | bash
+            echo 'export PATH="$HOME/.kubiya/bin:$PATH"' >> $BASH_ENV
+
+      - run:
+          name: Intelligent Build Analysis
+          command: |
+            cd build-artifact-analyzer
+
+            echo "=== KUBIYA BUILD ARTIFACT ANALYZER ==="
+            echo ""
+
+            kubiya exec "
+            ** YOU ARE RUNNING FROM WITHIN CI/CD AUTOMATION - NO USER INTERACTION INVOLVED - EXECUTE AWAY EVEN COMPLEX PLANS **
+
+            You are a build artifact analyzer.
+
+            TASK: Analyze and ingest build results
+
+            1. Recall historical build metrics from memory
+
+            2. Run tests with coverage: npm run test:coverage -- --json --outputFile=artifacts/test-results.json
+
+            3. Analyze the results:
+               - Total test duration
+               - Pass/fail counts
+               - Coverage percentages
+
+            4. Compare to historical baselines:
+               - Is this build faster or slower than average?
+               - Is coverage improving or declining?
+
+            5. Store the build record to memory for trend tracking
+
+            6. If you detect a regression (>50% slower or coverage drop):
+               - Report the regression with details
+            " --local --cwd . --yes
+
+            echo ""
+            echo "=== Kubiya execution complete ==="
+
+      - store_test_results:
+          path: build-artifact-analyzer/artifacts/coverage
+      - store_artifacts:
+          path: build-artifact-analyzer/artifacts
+
+  # ---------------------------------------------------------------------------
+  # Performance Regression Detector Jobs
+  # ---------------------------------------------------------------------------
+
+  test-perf-baseline:
+    docker:
+      - image: cimg/node:20.11
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-perf-deps-{{ checksum "performance-regression-detector/package.json" }}
+            - v1-perf-deps-
+
+      - run:
+          name: Install Dependencies
+          command: cd performance-regression-detector && npm ci
+
+      - save_cache:
+          paths:
+            - performance-regression-detector/node_modules
+          key: v1-perf-deps-{{ checksum "performance-regression-detector/package.json" }}
+
+      - run:
+          name: Run Benchmarks (Baseline)
+          command: |
+            cd performance-regression-detector
+            echo "=== BASELINE: Running benchmarks ==="
+            npm run benchmark:json || true
+
+      - store_artifacts:
+          path: performance-regression-detector/benchmark-results.json
+
+  test-perf-kubiya:
+    docker:
+      - image: cimg/python:3.11-node
+    environment:
+      KUBIYA_NON_INTERACTIVE: "true"
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-perf-deps-{{ checksum "performance-regression-detector/package.json" }}
+            - v1-perf-deps-
+
+      - run:
+          name: Install Dependencies
+          command: cd performance-regression-detector && npm ci
+
+      - save_cache:
+          paths:
+            - performance-regression-detector/node_modules
+          key: v1-perf-deps-{{ checksum "performance-regression-detector/package.json" }}
+
+      - run:
+          name: Install Kubiya CLI
+          command: |
+            curl -fsSL https://raw.githubusercontent.com/kubiyabot/cli/main/install.sh | bash
+            echo 'export PATH="$HOME/.kubiya/bin:$PATH"' >> $BASH_ENV
+
+      - run:
+          name: Intelligent Performance Detection
+          command: |
+            cd performance-regression-detector
+
+            echo "=== KUBIYA PERFORMANCE REGRESSION DETECTOR ==="
+            echo ""
+
+            kubiya exec "
+            ** YOU ARE RUNNING FROM WITHIN CI/CD AUTOMATION - NO USER INTERACTION INVOLVED - EXECUTE AWAY EVEN COMPLEX PLANS **
+
+            You are a performance regression detector.
+
+            TASK: Analyze benchmark results for regressions
+
+            1. Recall performance baselines from memory
+
+            2. Run benchmarks: npm run benchmark:json
+
+            3. Read benchmark-results.json and for each benchmark, compare to baseline:
+               - If ratio > 1.5: REGRESSION (50% slower)
+               - If ratio > 2.0: CRITICAL REGRESSION
+               - If ratio < 0.8: IMPROVEMENT (20% faster)
+
+            4. Report findings for each regression:
+               - Benchmark name
+               - Current value vs baseline
+               - Percentage change
+               - Severity (warning/critical)
+
+            5. Store benchmark results to memory for trend tracking
+
+            6. If this is a stable run, update performance baselines
+            " --local --cwd . --yes
+
+            echo ""
+            echo "=== Kubiya execution complete ==="
+
+      - store_artifacts:
+          path: performance-regression-detector/benchmark-results.json
+
+  # ---------------------------------------------------------------------------
+  # Cross-Repo Knowledge Share Jobs
+  # ---------------------------------------------------------------------------
+
+  test-crossrepo-baseline:
+    docker:
+      - image: cimg/node:20.11
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-crossrepo-deps-{{ checksum "cross-repo-knowledge-share/package.json" }}
+            - v1-crossrepo-deps-
+
+      - run:
+          name: Install Dependencies
+          command: cd cross-repo-knowledge-share && npm ci
+
+      - save_cache:
+          paths:
+            - cross-repo-knowledge-share/node_modules
+          key: v1-crossrepo-deps-{{ checksum "cross-repo-knowledge-share/package.json" }}
+
+      - run:
+          name: Run Tests (Baseline)
+          command: |
+            cd cross-repo-knowledge-share
+            echo "=== BASELINE: Running tests ==="
+            npm test || true
+
+      - store_test_results:
+          path: cross-repo-knowledge-share/coverage
+
+  test-crossrepo-kubiya:
+    docker:
+      - image: cimg/python:3.11-node
+    environment:
+      KUBIYA_NON_INTERACTIVE: "true"
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-crossrepo-deps-{{ checksum "cross-repo-knowledge-share/package.json" }}
+            - v1-crossrepo-deps-
+
+      - run:
+          name: Install Dependencies
+          command: cd cross-repo-knowledge-share && npm ci
+
+      - save_cache:
+          paths:
+            - cross-repo-knowledge-share/node_modules
+          key: v1-crossrepo-deps-{{ checksum "cross-repo-knowledge-share/package.json" }}
+
+      - run:
+          name: Install Kubiya CLI
+          command: |
+            curl -fsSL https://raw.githubusercontent.com/kubiyabot/cli/main/install.sh | bash
+            echo 'export PATH="$HOME/.kubiya/bin:$PATH"' >> $BASH_ENV
+
+      - run:
+          name: Bidirectional Organization Learning
+          command: |
+            cd cross-repo-knowledge-share
+
+            echo "=== KUBIYA CROSS-REPO KNOWLEDGE SHARE ==="
+            echo ""
+
+            kubiya exec "
+            ** YOU ARE RUNNING FROM WITHIN CI/CD AUTOMATION - NO USER INTERACTION INVOLVED - EXECUTE AWAY EVEN COMPLEX PLANS **
+
+            You are a bidirectional learning agent.
+
+            === PHASE 1: LEARN FROM ORGANIZATION ===
+
+            Recall from organizational memory:
+            - CI patterns for Node.js JavaScript
+            - Test optimization strategies that worked
+            - Flaky patterns to avoid
+
+            === PHASE 2: APPLY TO THIS REPO ===
+
+            Based on recalled knowledge:
+            1. Identify applicable patterns
+            2. Check our tests against known flaky patterns
+            3. Apply optimizations where appropriate
+
+            === PHASE 3: RUN TESTS ===
+
+            Execute: npm test -- --json --outputFile=test-results.json
+            Analyze results.
+
+            === PHASE 4: CONTRIBUTE BACK ===
+
+            After testing, if you discovered NEW insights:
+            - Store valuable patterns to memory for org-wide sharing
+            - Store new flaky patterns as warnings for other repos
+
+            === PHASE 5: REPORT ===
+
+            Summary:
+            - Patterns applied from org
+            - New patterns contributed
+            - Test results
+            " --local --cwd . --yes
+
+            echo ""
+            echo "=== Kubiya execution complete ==="
+
+      - store_test_results:
+          path: cross-repo-knowledge-share/coverage
+
 # =============================================================================
 # Conditional Workflows
 # =============================================================================
@@ -275,5 +714,49 @@ workflows:
           name: "Smart: Baseline (all 54 tests)"
       - test-smart-kubiya:
           name: "Smart: Kubiya (affected only)"
+          context:
+            - kubiya-secrets
+
+  # Runs when incident-learning-pipeline/ changes
+  incident-learning:
+    when: << pipeline.parameters.run-incident-learning >>
+    jobs:
+      - test-incident-baseline:
+          name: "Incident: Baseline"
+      - test-incident-kubiya:
+          name: "Incident: Kubiya (with learning)"
+          context:
+            - kubiya-secrets
+
+  # Runs when build-artifact-analyzer/ changes
+  artifact-analyzer:
+    when: << pipeline.parameters.run-artifact-analyzer >>
+    jobs:
+      - test-artifact-baseline:
+          name: "Artifact: Baseline"
+      - test-artifact-kubiya:
+          name: "Artifact: Kubiya (with ingestion)"
+          context:
+            - kubiya-secrets
+
+  # Runs when performance-regression-detector/ changes
+  perf-detector:
+    when: << pipeline.parameters.run-perf-detector >>
+    jobs:
+      - test-perf-baseline:
+          name: "Perf: Baseline"
+      - test-perf-kubiya:
+          name: "Perf: Kubiya (with detection)"
+          context:
+            - kubiya-secrets
+
+  # Runs when cross-repo-knowledge-share/ changes
+  cross-repo:
+    when: << pipeline.parameters.run-cross-repo >>
+    jobs:
+      - test-crossrepo-baseline:
+          name: "CrossRepo: Baseline"
+      - test-crossrepo-kubiya:
+          name: "CrossRepo: Kubiya (bidirectional)"
           context:
             - kubiya-secrets
