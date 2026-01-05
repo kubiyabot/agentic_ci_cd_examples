@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="38" failures="11" errors="0" time="5.469">
+  <testsuite name="tests/fixed-flaky-tests.test.js" errors="0" failures="1" skipped="0" timestamp="2025-12-23T16:53:58" time="0.201" tests="14">
+    <testcase classname="FIXED - Race Condition Tests" name="FIXED - async operation with proper wait" time="0.053">
+    </testcase>
+    <testcase classname="FIXED - Race Condition Tests" name="FIXED - concurrent array modifications with proper synchronization" time="0.001">
+    </testcase>
+    <testcase classname="FIXED - Resource Dependent Tests" name="FIXED - memory operation with realistic expectations" time="0">
+    </testcase>
+    <testcase classname="FIXED - Resource Dependent Tests" name="FIXED - CPU calculation with mocked performance" time="0.001">
+    </testcase>
+    <testcase classname="FIXED - Network Dependent Tests" name="FIXED - reliable API call with mocking" time="0.001">
+    </testcase>
+    <testcase classname="FIXED - Network Dependent Tests" name="FIXED - DNS resolution with controlled timing" time="0.051">
+    </testcase>
+    <testcase classname="FIXED - Order Independent Tests" name="FIXED - test A with isolated state" time="0">
+    </testcase>
+    <testcase classname="FIXED - Order Independent Tests" name="FIXED - test B with independent state" time="0">
+    </testcase>
+    <testcase classname="FIXED - Order Independent Tests" name="FIXED - test C with its own state" time="0.001">
+    </testcase>
+    <testcase classname="FIXED - Time Sensitive Tests" name="FIXED - date-based logic with mocked date" time="0.001">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 10
+Received: 8
+    at Object.toBe (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/tests/fixed-flaky-tests.test.js:184:18)
+    at Promise.then.completed (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:316:40)
+    at _runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="FIXED - Time Sensitive Tests" name="FIXED - timestamp precision with controlled timing" time="0">
+    </testcase>
+    <testcase classname="BEST PRACTICES - Reliable Test Patterns" name="deterministic data generation" time="0">
+    </testcase>
+    <testcase classname="BEST PRACTICES - Reliable Test Patterns" name="proper async test with controlled delays" time="0">
+    </testcase>
+    <testcase classname="BEST PRACTICES - Reliable Test Patterns" name="mocked external dependencies" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="tests/regression-tests.test.js" errors="0" failures="9" skipped="0" timestamp="2025-12-23T16:53:58" time="5.091" tests="10">
+    <testcase classname="Genuine Failures - Bug Regression Tests" name="REGRESSION: calculation bug in invoice total" time="0">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 70
+Received: 30
+    at Object.toBe (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/tests/regression-tests.test.js:23:19)
+    at Promise.then.completed (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:316:40)
+    at _runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Genuine Failures - Bug Regression Tests" name="REGRESSION: null pointer in user service" time="0.002">
+      <failure>Error: expect(received).not.toThrow()
+
+Error name:    &quot;Error&quot;
+Error message: &quot;expect(received).toBe(expected) // Object.is equality·
+Expected: \&quot;John Doe\&quot;
+Received: \&quot;undefined undefined\&quot;&quot;
+
+      36 |     expect(() =&gt; {
+      37 |       const fullName = getUserFullName(user);
+    &gt; 38 |       expect(fullName).toBe(&apos;John Doe&apos;);
+         |                        ^
+      39 |     }).not.toThrow(); // We expect it not to throw, but it will
+      40 |   });
+      41 |
+
+      at toBe (tests/regression-tests.test.js:38:24)
+      at Object.&lt;anonymous&gt; (node_modules/expect/build/toThrowMatchers.js:74:11)
+      at Object.throwingMatcher [as toThrow] (node_modules/expect/build/index.js:320:21)
+      at Object.toThrow (tests/regression-tests.test.js:39:12)
+    at Object.toThrow (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/tests/regression-tests.test.js:39:12)
+    at Promise.then.completed (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:316:40)
+    at _runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Genuine Failures - Bug Regression Tests" name="REGRESSION: array index out of bounds" time="0.001">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 3
+Received: undefined
+    at Object.toBe (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/tests/regression-tests.test.js:53:20)
+    at Promise.then.completed (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:316:40)
+    at _runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Genuine Failures - Bug Regression Tests" name="REGRESSION: incorrect date formatting" time="0">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: &quot;2024-3-15&quot;
+Received: &quot;2024-2-14&quot;
+    at Object.toBe (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/tests/regression-tests.test.js:67:23)
+    at Promise.then.completed (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:316:40)
+    at _runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Genuine Failures - Bug Regression Tests" name="REGRESSION: async operation never completes" time="5.003">
+      <failure>Error: thrown: &quot;Exceeded timeout of 5000 ms for a test.
+Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout.&quot;
+    at test (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/tests/regression-tests.test.js:70:3)
+    at _dispatchDescribe (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/index.js:91:26)
+    at describe (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/index.js:55:5)
+    at Object.describe (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/tests/regression-tests.test.js:7:1)
+    at Runtime._execModule (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runtime/build/index.js:1439:24)
+    at Runtime._loadModule (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runtime/build/index.js:1022:12)
+    at Runtime.requireModule (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runtime/build/index.js:882:12)
+    at jestAdapter (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:77:13)
+    at runTestInternal (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Genuine Failures - Business Logic Errors" name="FAILED: discount calculation exceeds maximum allowed" time="0.001">
+      <failure>Error: expect(received).toBeLessThanOrEqual(expected)
+
+Expected: &lt;= 50
+Received:    75
+    at Object.toBeLessThanOrEqual (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/tests/regression-tests.test.js:98:22)
+    at Promise.then.completed (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:316:40)
+    at _runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Genuine Failures - Business Logic Errors" name="FAILED: password validation missing special character check" time="0.001">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: false
+Received: true
+    at Object.toBe (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/tests/regression-tests.test.js:111:39)
+    at Promise.then.completed (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:316:40)
+    at _runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Genuine Failures - Business Logic Errors" name="FAILED: age verification allows minors" time="0.001">
+    </testcase>
+    <testcase classname="Genuine Failures - Integration Errors" name="FAILED: API response parsing error" time="0.001">
+      <failure>Error: expect(received).not.toThrow()
+
+Error name:    &quot;TypeError&quot;
+Error message: &quot;Cannot read properties of undefined (reading &apos;items&apos;)&quot;
+
+      135 |     const parseAPIResponse = (response) =&gt; {
+      136 |       // Bug: assuming response.data exists
+    &gt; 137 |       return response.data.items.map(item =&gt; item.id);
+          |                            ^
+      138 |     };
+      139 |     
+      140 |     const malformedResponse = { 
+
+      at items (tests/regression-tests.test.js:137:28)
+      at parseAPIResponse (tests/regression-tests.test.js:146:18)
+      at Object.&lt;anonymous&gt; (node_modules/expect/build/toThrowMatchers.js:74:11)
+      at Object.throwingMatcher [as toThrow] (node_modules/expect/build/index.js:320:21)
+      at Object.toThrow (tests/regression-tests.test.js:146:59)
+    at Object.toThrow (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/tests/regression-tests.test.js:146:59)
+    at Promise.then.completed (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:316:40)
+    at _runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Genuine Failures - Integration Errors" name="FAILED: database connection string malformed" time="0">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: &quot;mongodb://localhost:27017/testdb&quot;
+Received: &quot;mongodb://localhost/27017/testdb&quot;
+    at Object.toBe (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/tests/regression-tests.test.js:163:30)
+    at Promise.then.completed (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:316:40)
+    at _runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="tests/stable-tests.test.js" errors="0" failures="1" skipped="0" timestamp="2025-12-23T16:54:03" time="0.15" tests="14">
+    <testcase classname="Stable Mathematical Operations" name="basic arithmetic operations" time="0">
+    </testcase>
+    <testcase classname="Stable Mathematical Operations" name="mathematical constants" time="0.001">
+    </testcase>
+    <testcase classname="Stable Mathematical Operations" name="array operations" time="0">
+    </testcase>
+    <testcase classname="Stable String Operations" name="string manipulation" time="0">
+    </testcase>
+    <testcase classname="Stable String Operations" name="string parsing" time="0.001">
+    </testcase>
+    <testcase classname="Stable Object Operations" name="object creation and access" time="0">
+    </testcase>
+    <testcase classname="Stable Object Operations" name="object methods" time="0">
+    </testcase>
+    <testcase classname="Stable Async Operations" name="resolved promises" time="0">
+    </testcase>
+    <testcase classname="Stable Async Operations" name="async/await with timeout" time="0.102">
+      <failure>Error: write EPIPE
+    at afterWriteDispatched (node:internal/stream_base_commons:159:15)
+    at writeGeneric (node:internal/stream_base_commons:150:3)
+    at Socket._writeGeneric (node:net:966:11)
+    at Socket._write (node:net:978:8)
+    at writeOrBuffer (node:internal/streams/writable:570:12)
+    at _write (node:internal/streams/writable:499:10)
+    at Socket.Writable.write (node:internal/streams/writable:508:10)
+    at Socket.stream.write (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/@jest/reporters/build/VerboseReporter.js:47:7)
+    at console.value (node:internal/console/constructor:298:16)
+    at console.log (node:internal/console/constructor:384:26)
+    at console._log (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/@jest/console/build/CustomConsole.js:68:11)
+    at console.log (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/@jest/console/build/CustomConsole.js:141:10)
+    at Object.log (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/tests/setup/jest.setup.js:223:9)
+    at Runtime._execModule (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runtime/build/index.js:1439:24)
+    at Runtime._loadModule (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runtime/build/index.js:1022:12)
+    at Runtime.requireModule (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runtime/build/index.js:882:12)
+    at jestAdapter (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:70:15)
+    at runTestInternal (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/shaked/projects/kubiya-stack/ci_cd_pipeline_examples/flakyTests/node_modules/jest-runner/build/runTest.js:444:34)</failure>
+    </testcase>
+    <testcase classname="Stable Async Operations" name="promise all" time="0">
+    </testcase>
+    <testcase classname="Stable Error Handling" name="throwing and catching errors" time="0.003">
+    </testcase>
+    <testcase classname="Stable Error Handling" name="try-catch blocks" time="0.001">
+    </testcase>
+    <testcase classname="Stable Data Structures" name="Set operations" time="0">
+    </testcase>
+    <testcase classname="Stable Data Structures" name="Map operations" time="0">
+    </testcase>
+  </testsuite>
+</testsuites>
