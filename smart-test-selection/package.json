@@ -13,7 +13,7 @@
     "test:search": "jest src/search"
   },
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.21.2"
   },
   "devDependencies": {
     "jest": "^29.7.0"
