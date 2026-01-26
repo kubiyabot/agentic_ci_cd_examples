@@ -1,0 +1,156 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - '**/package.json'
+      - '**/package-lock.json'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - '**/package.json'
+      - '**/package-lock.json'
+  schedule:
+    # Run weekly security audit every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  security-audit:
+    name: NPM Security Audit
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        project:
+          - vulnerability-scanner
+          - flakyTests
+          - smart-test-selection
+          - fleaky-tests-circleci
+          - build-artifact-analyzer
+          - cross-repo-knowledge-share
+          - incident-learning-pipeline
+          - performance-regression-detector
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: ${{ matrix.project }}/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ${{ matrix.project }}
+        run: npm ci --legacy-peer-deps || npm install
+      
+      - name: Run npm audit
+        working-directory: ${{ matrix.project }}
+        run: |
+          echo "🔍 Running security audit for ${{ matrix.project }}..."
+          npm audit --audit-level=high --json > audit-results.json || true
+          
+          # Display results
+          npm audit --audit-level=high || true
+      
+      - name: Check for critical/high vulnerabilities
+        working-directory: ${{ matrix.project }}
+        run: |
+          # Fail if critical or high vulnerabilities found
+          CRITICAL=$(jq '.metadata.vulnerabilities.critical // 0' audit-results.json)
+          HIGH=$(jq '.metadata.vulnerabilities.high // 0' audit-results.json)
+          
+          echo "🔴 Critical vulnerabilities: $CRITICAL"
+          echo "🟠 High vulnerabilities: $HIGH"
+          
+          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+            echo "❌ Security vulnerabilities found!"
+            echo "::error::Found $CRITICAL critical and $HIGH high severity vulnerabilities in ${{ matrix.project }}"
+            exit 1
+          else
+            echo "✅ No critical or high vulnerabilities found!"
+          fi
+      
+      - name: Upload audit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-results-${{ matrix.project }}
+          path: ${{ matrix.project }}/audit-results.json
+          retention-days: 30
+
+  snyk-scan:
+    name: Snyk Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'schedule'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --all-projects --severity-threshold=high
+      
+      - name: Upload Snyk results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk.sarif
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          deny-licenses: AGPL-1.0-or-later, GPL-2.0-only, GPL-3.0-only
+
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [security-audit]
+    if: always()
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: audit-results
+      
+      - name: Generate security summary
+        run: |
+          echo "## 🔒 Security Audit Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Project | Critical | High | Medium | Low |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|----------|------|--------|-----|" >> $GITHUB_STEP_SUMMARY
+          
+          for dir in audit-results/*/; do
+            if [ -f "${dir}audit-results.json" ]; then
+              PROJECT=$(basename "$dir" | sed 's/audit-results-//')
+              CRITICAL=$(jq '.metadata.vulnerabilities.critical // 0' "${dir}audit-results.json")
+              HIGH=$(jq '.metadata.vulnerabilities.high // 0' "${dir}audit-results.json")
+              MEDIUM=$(jq '.metadata.vulnerabilities.moderate // 0' "${dir}audit-results.json")
+              LOW=$(jq '.metadata.vulnerabilities.low // 0' "${dir}audit-results.json")
+              
+              echo "| $PROJECT | $CRITICAL | $HIGH | $MEDIUM | $LOW |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Date**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
